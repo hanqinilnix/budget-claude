@@ -1,7 +1,7 @@
 const TABS = [
   { key: 'dashboard', label: 'Home', icon: '🏠' },
   { key: 'transactions', label: 'History', icon: '📋' },
-  { key: 'add', label: 'Add', icon: '+' },
+  { key: 'add', label: 'Add' },
   { key: 'budgets', label: 'Budgets', icon: '🎯' },
   { key: 'settings', label: 'Settings', icon: '⚙️' },
 ];
@@ -12,7 +12,7 @@ export default function NavBar({ tab, onChange, onAdd }) {
       {TABS.map((t) =>
         t.key === 'add' ? (
           <button key={t.key} type="button" className="navbar-fab" onClick={onAdd} aria-label="Add transaction">
-            <span>{t.icon}</span>
+            <span className="navbar-fab-icon" />
           </button>
         ) : (
           <button
