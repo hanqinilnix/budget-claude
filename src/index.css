@@ -466,6 +466,7 @@ button {
   justify-content: center;
   z-index: 50;
   padding-bottom: var(--keyboard-inset, 0px);
+  transition: padding-bottom 0.25s ease-out;
   animation: fade-in 0.15s ease;
 }
 
@@ -482,6 +483,7 @@ button {
   padding: 10px 20px calc(20px + var(--safe-bottom));
   max-height: min(88dvh, calc(100dvh - var(--keyboard-inset, 0px) - 12px));
   overflow-y: auto;
+  transition: max-height 0.25s ease-out;
   animation: slide-up 0.2s ease;
 }
 
