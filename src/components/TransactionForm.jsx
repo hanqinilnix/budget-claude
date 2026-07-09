@@ -76,14 +76,22 @@ export default function TransactionForm({ transaction, onClose }) {
             />
           </label>
 
-          <label className="field">
+          <div className="field">
             <span>Category</span>
-            <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+            <div className="category-grid">
               {visibleCategories.map((c) => (
-                <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+                <button
+                  type="button"
+                  key={c.id}
+                  className={`category-choice ${categoryId === c.id ? 'selected' : ''}`}
+                  onClick={() => setCategoryId(c.id)}
+                >
+                  <span className="category-choice-icon" style={{ background: c.color }}>{c.icon}</span>
+                  <span className="category-choice-name">{c.name}</span>
+                </button>
               ))}
-            </select>
-          </label>
+            </div>
+          </div>
 
           <label className="field">
             <span>Date</span>
