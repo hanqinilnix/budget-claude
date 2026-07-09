@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useBudget } from '../context/BudgetContext.jsx';
+import Sheet from './Sheet.jsx';
 
 const ICON_CHOICES = ['🛒', '🍔', '🚗', '🏠', '💡', '🎬', '💊', '🛍️', '💰', '📦', '✈️', '🎓', '🐾', '🎁', '📱', '💻'];
 const COLOR_CHOICES = ['#22c55e', '#f97316', '#3b82f6', '#a855f7', '#eab308', '#ec4899', '#14b8a6', '#f43f5e', '#84cc16', '#64748b'];
@@ -40,63 +41,60 @@ export default function CategoryForm({ category, onClose }) {
   };
 
   return (
-    <div className="sheet-backdrop" onClick={onClose}>
-      <div className="sheet" onClick={(e) => e.stopPropagation()}>
-        <div className="sheet-handle" />
-        <form onSubmit={handleSubmit} className="tx-form">
-          <label className="field">
-            <span>Name</span>
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Coffee" autoFocus />
-          </label>
+    <Sheet onClose={onClose}>
+      <form onSubmit={handleSubmit} className="tx-form">
+        <label className="field">
+          <span>Name</span>
+          <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Coffee" autoFocus />
+        </label>
 
-          <label className="field">
-            <span>Monthly budget (0 = no budget)</span>
-            <input type="number" inputMode="decimal" step="0.01" min="0" value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="0.00" />
-          </label>
+        <label className="field">
+          <span>Monthly budget (0 = no budget)</span>
+          <input type="number" inputMode="decimal" step="0.01" min="0" value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="0.00" />
+        </label>
 
-          <div className="field">
-            <span>Icon</span>
-            <div className="choice-grid">
-              {ICON_CHOICES.map((i) => (
-                <button type="button" key={i} className={`choice-icon ${icon === i ? 'selected' : ''}`} onClick={() => setIcon(i)}>
-                  {i}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="field">
-            <span>Color</span>
-            <div className="choice-grid">
-              {COLOR_CHOICES.map((c) => (
-                <button
-                  type="button"
-                  key={c}
-                  className={`choice-color ${color === c ? 'selected' : ''}`}
-                  style={{ background: c }}
-                  onClick={() => setColor(c)}
-                />
-              ))}
-            </div>
-          </div>
-
-          {error && <p className="form-error">{error}</p>}
-
-          <div className="form-actions">
-            {isEdit && (
-              <button type="button" className="btn danger" onClick={handleDelete}>
-                Delete
+        <div className="field">
+          <span>Icon</span>
+          <div className="choice-grid">
+            {ICON_CHOICES.map((i) => (
+              <button type="button" key={i} className={`choice-icon ${icon === i ? 'selected' : ''}`} onClick={() => setIcon(i)}>
+                {i}
               </button>
-            )}
-            <button type="button" className="btn ghost" onClick={onClose}>
-              Cancel
-            </button>
-            <button type="submit" className="btn primary">
-              {isEdit ? 'Save' : 'Add'}
-            </button>
+            ))}
           </div>
-        </form>
-      </div>
-    </div>
+        </div>
+
+        <div className="field">
+          <span>Color</span>
+          <div className="choice-grid">
+            {COLOR_CHOICES.map((c) => (
+              <button
+                type="button"
+                key={c}
+                className={`choice-color ${color === c ? 'selected' : ''}`}
+                style={{ background: c }}
+                onClick={() => setColor(c)}
+              />
+            ))}
+          </div>
+        </div>
+
+        {error && <p className="form-error">{error}</p>}
+
+        <div className="form-actions">
+          {isEdit && (
+            <button type="button" className="btn danger" onClick={handleDelete}>
+              Delete
+            </button>
+          )}
+          <button type="button" className="btn ghost" onClick={onClose}>
+            Cancel
+          </button>
+          <button type="submit" className="btn primary">
+            {isEdit ? 'Save' : 'Add'}
+          </button>
+        </div>
+      </form>
+    </Sheet>
   );
 }
