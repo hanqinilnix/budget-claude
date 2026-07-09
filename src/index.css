@@ -465,6 +465,13 @@ button {
   align-items: flex-end;
   justify-content: center;
   z-index: 50;
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
+
+.sheet-backdrop.entering,
+.sheet-backdrop.closing {
+  opacity: 0;
 }
 
 .sheet {
@@ -473,9 +480,17 @@ button {
   background: var(--surface);
   border-radius: 20px 20px 0 0;
   padding: 10px 20px;
-  max-height: min(88dvh, calc(100dvh - var(--keyboard-inset, 0px) - 12px));
+  max-height: 88dvh;
   overflow-y: auto;
-  will-change: transform;
+  transform: translateY(0);
+  opacity: 1;
+  transition: transform 0.2s ease-out, opacity 0.2s ease-out;
+}
+
+.sheet.entering,
+.sheet.closing {
+  transform: translateY(24px);
+  opacity: 0;
 }
 
 .sheet-handle {
