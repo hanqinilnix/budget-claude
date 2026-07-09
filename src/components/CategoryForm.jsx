@@ -15,7 +15,7 @@ export default function CategoryForm({ category, onClose }) {
   const [budget, setBudget] = useState(category ? String(category.budget || '') : '');
   const [error, setError] = useState('');
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e, requestClose) => {
     e.preventDefault();
     if (!name.trim()) {
       setError('Give the category a name');
@@ -32,69 +32,71 @@ export default function CategoryForm({ category, onClose }) {
     } else {
       await addCategory(payload);
     }
-    onClose();
+    requestClose();
   };
 
-  const handleDelete = async () => {
+  const handleDelete = async (requestClose) => {
     await deleteCategory(category.id);
-    onClose();
+    requestClose();
   };
 
   return (
     <Sheet onClose={onClose}>
-      <form onSubmit={handleSubmit} className="tx-form">
-        <label className="field">
-          <span>Name</span>
-          <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Coffee" autoFocus />
-        </label>
+      {(requestClose) => (
+        <form onSubmit={(e) => handleSubmit(e, requestClose)} className="tx-form">
+          <label className="field">
+            <span>Name</span>
+            <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Coffee" autoFocus />
+          </label>
 
-        <label className="field">
-          <span>Monthly budget (0 = no budget)</span>
-          <input type="number" inputMode="decimal" step="0.01" min="0" value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="0.00" />
-        </label>
+          <label className="field">
+            <span>Monthly budget (0 = no budget)</span>
+            <input type="number" inputMode="decimal" step="0.01" min="0" value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="0.00" />
+          </label>
 
-        <div className="field">
-          <span>Icon</span>
-          <div className="choice-grid">
-            {ICON_CHOICES.map((i) => (
-              <button type="button" key={i} className={`choice-icon ${icon === i ? 'selected' : ''}`} onClick={() => setIcon(i)}>
-                {i}
+          <div className="field">
+            <span>Icon</span>
+            <div className="choice-grid">
+              {ICON_CHOICES.map((i) => (
+                <button type="button" key={i} className={`choice-icon ${icon === i ? 'selected' : ''}`} onClick={() => setIcon(i)}>
+                  {i}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="field">
+            <span>Color</span>
+            <div className="choice-grid">
+              {COLOR_CHOICES.map((c) => (
+                <button
+                  type="button"
+                  key={c}
+                  className={`choice-color ${color === c ? 'selected' : ''}`}
+                  style={{ background: c }}
+                  onClick={() => setColor(c)}
+                />
+              ))}
+            </div>
+          </div>
+
+          {error && <p className="form-error">{error}</p>}
+
+          <div className="form-actions">
+            {isEdit && (
+              <button type="button" className="btn danger" onClick={() => handleDelete(requestClose)}>
+                Delete
               </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="field">
-          <span>Color</span>
-          <div className="choice-grid">
-            {COLOR_CHOICES.map((c) => (
-              <button
-                type="button"
-                key={c}
-                className={`choice-color ${color === c ? 'selected' : ''}`}
-                style={{ background: c }}
-                onClick={() => setColor(c)}
-              />
-            ))}
-          </div>
-        </div>
-
-        {error && <p className="form-error">{error}</p>}
-
-        <div className="form-actions">
-          {isEdit && (
-            <button type="button" className="btn danger" onClick={handleDelete}>
-              Delete
+            )}
+            <button type="button" className="btn ghost" onClick={requestClose}>
+              Cancel
             </button>
-          )}
-          <button type="button" className="btn ghost" onClick={onClose}>
-            Cancel
-          </button>
-          <button type="submit" className="btn primary">
-            {isEdit ? 'Save' : 'Add'}
-          </button>
-        </div>
-      </form>
+            <button type="submit" className="btn primary">
+              {isEdit ? 'Save' : 'Add'}
+            </button>
+          </div>
+        </form>
+      )}
     </Sheet>
   );
 }
