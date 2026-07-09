@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useBudget } from '../context/BudgetContext.jsx';
 import { todayISO } from '../utils.js';
+import Sheet from './Sheet.jsx';
 
 export default function TransactionForm({ transaction, onClose }) {
   const { categories, addTransaction, updateTransaction, deleteTransaction } = useBudget();
@@ -49,69 +50,66 @@ export default function TransactionForm({ transaction, onClose }) {
   };
 
   return (
-    <div className="sheet-backdrop" onClick={onClose}>
-      <div className="sheet" onClick={(e) => e.stopPropagation()}>
-        <div className="sheet-handle" />
-        <form onSubmit={handleSubmit} className="tx-form">
-          <div className="type-toggle">
-            <button type="button" className={type === 'expense' ? 'active' : ''} onClick={() => setType('expense')}>
-              Expense
+    <Sheet onClose={onClose}>
+      <form onSubmit={handleSubmit} className="tx-form">
+        <div className="type-toggle">
+          <button type="button" className={type === 'expense' ? 'active' : ''} onClick={() => setType('expense')}>
+            Expense
+          </button>
+          <button type="button" className={type === 'income' ? 'active' : ''} onClick={() => setType('income')}>
+            Income
+          </button>
+        </div>
+
+        <label className="field">
+          <span>Amount</span>
+          <input
+            type="number"
+            inputMode="decimal"
+            step="0.01"
+            min="0"
+            placeholder="0.00"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            autoFocus
+          />
+        </label>
+
+        <label className="field">
+          <span>Category</span>
+          <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+            {visibleCategories.map((c) => (
+              <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+            ))}
+          </select>
+        </label>
+
+        <label className="field">
+          <span>Date</span>
+          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} max={todayISO()} />
+        </label>
+
+        <label className="field">
+          <span>Note (optional)</span>
+          <input type="text" placeholder="e.g. Weekly groceries" value={note} onChange={(e) => setNote(e.target.value)} />
+        </label>
+
+        {error && <p className="form-error">{error}</p>}
+
+        <div className="form-actions">
+          {isEdit && (
+            <button type="button" className="btn danger" onClick={handleDelete}>
+              Delete
             </button>
-            <button type="button" className={type === 'income' ? 'active' : ''} onClick={() => setType('income')}>
-              Income
-            </button>
-          </div>
-
-          <label className="field">
-            <span>Amount</span>
-            <input
-              type="number"
-              inputMode="decimal"
-              step="0.01"
-              min="0"
-              placeholder="0.00"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              autoFocus
-            />
-          </label>
-
-          <label className="field">
-            <span>Category</span>
-            <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
-              {visibleCategories.map((c) => (
-                <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
-              ))}
-            </select>
-          </label>
-
-          <label className="field">
-            <span>Date</span>
-            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} max={todayISO()} />
-          </label>
-
-          <label className="field">
-            <span>Note (optional)</span>
-            <input type="text" placeholder="e.g. Weekly groceries" value={note} onChange={(e) => setNote(e.target.value)} />
-          </label>
-
-          {error && <p className="form-error">{error}</p>}
-
-          <div className="form-actions">
-            {isEdit && (
-              <button type="button" className="btn danger" onClick={handleDelete}>
-                Delete
-              </button>
-            )}
-            <button type="button" className="btn ghost" onClick={onClose}>
-              Cancel
-            </button>
-            <button type="submit" className="btn primary">
-              {isEdit ? 'Save' : 'Add'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+          )}
+          <button type="button" className="btn ghost" onClick={onClose}>
+            Cancel
+          </button>
+          <button type="submit" className="btn primary">
+            {isEdit ? 'Save' : 'Add'}
+          </button>
+        </div>
+      </form>
+    </Sheet>
   );
 }
