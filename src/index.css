@@ -527,7 +527,7 @@ button {
   position: sticky;
   top: 0;
   background: var(--surface);
-  padding: 10px 0 14px;
+  padding: calc(14px + var(--safe-top)) 0 14px;
   margin: 0 -20px 0;
   touch-action: none;
   cursor: grab;
