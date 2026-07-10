@@ -6,11 +6,13 @@ import TransactionsView from './components/TransactionsView.jsx';
 import BudgetsView from './components/BudgetsView.jsx';
 import SettingsView from './components/SettingsView.jsx';
 import TransactionForm from './components/TransactionForm.jsx';
+import CategoryForm from './components/CategoryForm.jsx';
 
 function AppShell() {
   const { loading } = useBudget();
   const [tab, setTab] = useState('dashboard');
   const [formState, setFormState] = useState(null); // null | { transaction: null|obj }
+  const [categoryFormState, setCategoryFormState] = useState(null); // null | { category: null|obj }
 
   if (loading) {
     return (
@@ -24,8 +26,16 @@ function AppShell() {
   const openEditForm = (transaction) => setFormState({ transaction });
   const closeForm = () => setFormState(null);
 
+  const openAddCategory = () => setCategoryFormState({ category: null });
+  const openEditCategory = (category) => setCategoryFormState({ category });
+  const closeCategoryForm = () => setCategoryFormState(null);
+
   if (formState) {
     return <TransactionForm transaction={formState.transaction} onClose={closeForm} />;
+  }
+
+  if (categoryFormState) {
+    return <CategoryForm category={categoryFormState.category} onClose={closeCategoryForm} />;
   }
 
   return (
@@ -33,7 +43,7 @@ function AppShell() {
       <main className="app-content">
         {tab === 'dashboard' && <Dashboard onEditTransaction={openEditForm} onAdd={openAddForm} />}
         {tab === 'transactions' && <TransactionsView onEditTransaction={openEditForm} />}
-        {tab === 'budgets' && <BudgetsView />}
+        {tab === 'budgets' && <BudgetsView onAddCategory={openAddCategory} onEditCategory={openEditCategory} />}
         {tab === 'settings' && <SettingsView />}
       </main>
       <NavBar tab={tab} onChange={setTab} onAdd={openAddForm} />

@@ -484,63 +484,6 @@ button {
   background: var(--accent-dark);
 }
 
-/* Sheet / modal */
-.sheet-backdrop {
-  position: fixed;
-  left: 0;
-  width: 100%;
-  background: rgba(0, 0, 0, 0.45);
-  display: flex;
-  align-items: stretch;
-  justify-content: center;
-  z-index: 50;
-  opacity: 1;
-  transition: opacity 0.2s ease, top 0.2s ease-out, height 0.2s ease-out;
-}
-
-.sheet-backdrop.entering,
-.sheet-backdrop.closing {
-  opacity: 0;
-}
-
-.sheet {
-  width: 100%;
-  max-width: 480px;
-  height: 100%;
-  background: var(--surface);
-  border-radius: 20px 20px 0 0;
-  padding: 0 20px 10px;
-  overflow-y: auto;
-  transform: translateY(0);
-  opacity: 1;
-  transition: transform 0.2s ease-out, opacity 0.2s ease-out;
-  touch-action: pan-y;
-}
-
-.sheet.entering,
-.sheet.closing {
-  transform: translateY(24px);
-  opacity: 0;
-}
-
-.sheet-drag-zone {
-  position: sticky;
-  top: 0;
-  background: var(--surface);
-  padding: calc(14px + var(--safe-top)) 0 14px;
-  margin: 0 -20px 0;
-  touch-action: none;
-  cursor: grab;
-}
-
-.sheet-handle {
-  width: 36px;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--border);
-  margin: 0 auto;
-}
-
 /* Page (full-screen, push-navigation style) */
 .page-backdrop {
   position: fixed;

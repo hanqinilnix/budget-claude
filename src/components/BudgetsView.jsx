@@ -1,22 +1,8 @@
-import { useState } from 'react';
 import { useBudget } from '../context/BudgetContext.jsx';
-import CategoryForm from './CategoryForm.jsx';
 import { formatCurrency } from '../utils.js';
 
-export default function BudgetsView() {
+export default function BudgetsView({ onAddCategory, onEditCategory }) {
   const { categories, currency } = useBudget();
-  const [editing, setEditing] = useState(null); // null | {} | category
-  const [showForm, setShowForm] = useState(false);
-
-  const openAdd = () => {
-    setEditing(null);
-    setShowForm(true);
-  };
-  const openEdit = (c) => {
-    setEditing(c);
-    setShowForm(true);
-  };
-  const close = () => setShowForm(false);
 
   const totalBudget = categories.reduce((sum, c) => sum + (c.budget || 0), 0);
 
@@ -24,7 +10,7 @@ export default function BudgetsView() {
     <div className="view">
       <header className="view-header">
         <h1>Budgets</h1>
-        <button type="button" className="btn small primary" onClick={openAdd}>+ Category</button>
+        <button type="button" className="btn small primary" onClick={onAddCategory}>+ Category</button>
       </header>
 
       <div className="summary-cards single">
@@ -37,7 +23,7 @@ export default function BudgetsView() {
       <section className="section">
         <div className="card-list">
           {categories.map((c) => (
-            <button key={c.id} type="button" className="category-row" onClick={() => openEdit(c)}>
+            <button key={c.id} type="button" className="category-row" onClick={() => onEditCategory(c)}>
               <span className="tx-icon" style={{ background: c.color }}>{c.icon}</span>
               <span className="tx-info">
                 <span className="tx-name">{c.name}</span>
@@ -48,8 +34,6 @@ export default function BudgetsView() {
           ))}
         </div>
       </section>
-
-      {showForm && <CategoryForm category={editing} onClose={close} />}
     </div>
   );
 }
