@@ -42,8 +42,8 @@ export default function TransactionsView({ onEditTransaction }) {
                   <li key={t.id} className="tx-row" onClick={() => onEditTransaction(t)}>
                     <span className="tx-icon" style={{ background: cat?.color }}>{cat?.icon || '❔'}</span>
                     <span className="tx-info">
-                      <span className="tx-name">{cat?.name || 'Uncategorized'}</span>
-                      {t.note && <span className="tx-note">{t.note}</span>}
+                      <span className="tx-name">{t.note || cat?.name || 'Uncategorized'}</span>
+                      {t.note && <span className="tx-note">{cat?.name || 'Uncategorized'}</span>}
                     </span>
                     <span className={`tx-amount ${t.type}`}>
                       {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount, currency)}
