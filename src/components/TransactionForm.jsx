@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useBudget } from '../context/BudgetContext.jsx';
 import { todayISO } from '../utils.js';
-import Sheet from './Sheet.jsx';
+import Page from './Page.jsx';
 
 export default function TransactionForm({ transaction, onClose }) {
   const { categories, addTransaction, updateTransaction, deleteTransaction } = useBudget();
@@ -50,7 +50,7 @@ export default function TransactionForm({ transaction, onClose }) {
   };
 
   return (
-    <Sheet onClose={onClose}>
+    <Page onClose={onClose}>
       {(requestClose) => (
         <form onSubmit={(e) => handleSubmit(e, requestClose)} className="tx-form">
           <div className="type-toggle">
@@ -120,6 +120,6 @@ export default function TransactionForm({ transaction, onClose }) {
           </div>
         </form>
       )}
-    </Sheet>
+    </Page>
   );
 }
