@@ -541,6 +541,34 @@ button {
   margin: 0 auto;
 }
 
+/* Page (full-screen, push-navigation style) */
+.page-backdrop {
+  position: fixed;
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  z-index: 50;
+  transition: top 0.2s ease-out, height 0.2s ease-out;
+}
+
+.page {
+  width: 100%;
+  max-width: 480px;
+  height: 100%;
+  background: var(--bg);
+  overflow-y: auto;
+  padding: calc(20px + var(--safe-top)) 20px calc(20px + var(--safe-bottom));
+  transform: translateX(0);
+  transition: transform 0.2s ease-out;
+  touch-action: pan-y;
+}
+
+.page.entering,
+.page.closing {
+  transform: translateX(100%);
+}
+
 .tx-form {
   display: flex;
   flex-direction: column;
