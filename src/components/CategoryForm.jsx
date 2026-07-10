@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useBudget } from '../context/BudgetContext.jsx';
-import Sheet from './Sheet.jsx';
+import Page from './Page.jsx';
 
 const ICON_CHOICES = ['🛒', '🍔', '🚗', '🏠', '💡', '🎬', '💊', '🛍️', '💰', '📦', '✈️', '🎓', '🐾', '🎁', '📱', '💻'];
 const COLOR_CHOICES = ['#22c55e', '#f97316', '#3b82f6', '#a855f7', '#eab308', '#ec4899', '#14b8a6', '#f43f5e', '#84cc16', '#64748b'];
@@ -41,7 +41,7 @@ export default function CategoryForm({ category, onClose }) {
   };
 
   return (
-    <Sheet onClose={onClose}>
+    <Page onClose={onClose}>
       {(requestClose) => (
         <form onSubmit={(e) => handleSubmit(e, requestClose)} className="tx-form">
           <label className="field">
@@ -97,6 +97,6 @@ export default function CategoryForm({ category, onClose }) {
           </div>
         </form>
       )}
-    </Sheet>
+    </Page>
   );
 }

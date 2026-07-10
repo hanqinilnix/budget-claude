@@ -76,6 +76,11 @@ export default function TransactionForm({ transaction, onClose }) {
             />
           </label>
 
+          <label className="field">
+            <span>Note (optional)</span>
+            <input type="text" placeholder="e.g. Weekly groceries" value={note} onChange={(e) => setNote(e.target.value)} />
+          </label>
+
           <div className="field">
             <span>Category</span>
             <div className="category-grid">
@@ -96,11 +101,6 @@ export default function TransactionForm({ transaction, onClose }) {
           <label className="field">
             <span>Date</span>
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} max={todayISO()} />
-          </label>
-
-          <label className="field">
-            <span>Note (optional)</span>
-            <input type="text" placeholder="e.g. Weekly groceries" value={note} onChange={(e) => setNote(e.target.value)} />
           </label>
 
           {error && <p className="form-error">{error}</p>}
