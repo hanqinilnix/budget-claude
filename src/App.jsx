@@ -24,6 +24,10 @@ function AppShell() {
   const openEditForm = (transaction) => setFormState({ transaction });
   const closeForm = () => setFormState(null);
 
+  if (formState) {
+    return <TransactionForm transaction={formState.transaction} onClose={closeForm} />;
+  }
+
   return (
     <div className="app">
       <main className="app-content">
@@ -33,12 +37,6 @@ function AppShell() {
         {tab === 'settings' && <SettingsView />}
       </main>
       <NavBar tab={tab} onChange={setTab} onAdd={openAddForm} />
-      {formState && (
-        <TransactionForm
-          transaction={formState.transaction}
-          onClose={closeForm}
-        />
-      )}
     </div>
   );
 }
