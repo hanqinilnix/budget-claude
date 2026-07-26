@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { BudgetProvider, useBudget } from './context/BudgetContext.jsx';
 import NavBar from './components/NavBar.jsx';
 import Dashboard from './components/Dashboard.jsx';
+import SpendingView from './components/SpendingView.jsx';
 import TransactionsView from './components/TransactionsView.jsx';
 import BudgetsView from './components/BudgetsView.jsx';
 import SettingsView from './components/SettingsView.jsx';
@@ -10,7 +11,7 @@ import CategoryForm from './components/CategoryForm.jsx';
 
 function AppShell() {
   const { loading } = useBudget();
-  const [tab, setTab] = useState('dashboard');
+  const [tab, setTab] = useState('spending');
   const [formState, setFormState] = useState(null); // null | { transaction: null|obj }
   const [categoryFormState, setCategoryFormState] = useState(null); // null | { category: null|obj }
 
@@ -41,6 +42,7 @@ function AppShell() {
   return (
     <div className="app">
       <main className="app-content">
+        {tab === 'spending' && <SpendingView />}
         {tab === 'dashboard' && <Dashboard onEditTransaction={openEditForm} onAdd={openAddForm} />}
         {tab === 'transactions' && <TransactionsView onEditTransaction={openEditForm} />}
         {tab === 'budgets' && <BudgetsView onAddCategory={openAddCategory} onEditCategory={openEditCategory} />}

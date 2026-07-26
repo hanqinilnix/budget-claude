@@ -29,6 +29,31 @@ export function todayISO() {
   return d.toISOString().slice(0, 10);
 }
 
+function toISO(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+export function addDaysISO(dateStr, delta) {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return toISO(new Date(year, month - 1, day + delta));
+}
+
+// Monday of the week containing dateStr.
+export function startOfWeekISO(dateStr) {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const weekday = new Date(year, month - 1, day).getDay(); // 0 = Sunday
+  return addDaysISO(dateStr, -((weekday + 6) % 7));
+}
+
+export function startOfMonthISO(dateStr) {
+  return `${dateStr.slice(0, 7)}-01`;
+}
+
+export function endOfMonthISO(dateStr) {
+  const [year, month] = dateStr.split('-').map(Number);
+  return toISO(new Date(year, month, 0)); // day 0 of next month = last day of this one
+}
+
 export function monthKey(dateStr) {
   return dateStr.slice(0, 7); // YYYY-MM
 }
