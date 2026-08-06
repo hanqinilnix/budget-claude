@@ -6,12 +6,22 @@ const TABS = [
   { key: 'settings', label: 'Settings', icon: '⚙️' },
 ];
 
+// Budgets and Settings have their own actions, so the add button would be a
+// non-sequitur there.
+const TABS_WITH_ADD = new Set(['spending', 'dashboard', 'transactions']);
+
+export function tabHasAddButton(tab) {
+  return TABS_WITH_ADD.has(tab);
+}
+
 export default function NavBar({ tab, onChange, onAdd }) {
   return (
     <>
-      <button type="button" className="navbar-fab" onClick={onAdd} aria-label="Add transaction">
-        <span className="navbar-fab-icon" />
-      </button>
+      {tabHasAddButton(tab) && (
+        <button type="button" className="navbar-fab" onClick={onAdd} aria-label="Add transaction">
+          <span className="navbar-fab-icon" />
+        </button>
+      )}
       <nav className="navbar">
         {TABS.map((t) => (
           <button

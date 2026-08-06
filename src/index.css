@@ -105,6 +105,12 @@ button {
   -webkit-overflow-scrolling: touch;
 }
 
+/* Clears the floating add button (56px tall, 74px off the bottom) plus a 12px
+   gap, so scrolled-to-bottom content never hides under it. */
+.app-content.with-fab {
+  padding-bottom: calc(142px + var(--safe-bottom));
+}
+
 .view-header {
   display: flex;
   align-items: center;
@@ -552,12 +558,12 @@ button {
   white-space: nowrap;
 }
 
-/* Floats clear of the tab row, pinned to the bottom-left of the app column
+/* Floats clear of the tab row, pinned to the bottom-right of the app column
    (480px wide at most) rather than the viewport. */
 .navbar-fab {
   position: fixed;
   bottom: calc(74px + var(--safe-bottom));
-  left: max(16px, calc(50% - 240px + 16px));
+  right: max(16px, calc(50% - 240px + 16px));
   z-index: 40;
   width: 56px;
   height: 56px;
