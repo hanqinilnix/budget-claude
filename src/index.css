@@ -519,17 +519,11 @@ button {
   max-width: 480px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   background: var(--surface);
   border-top: 1px solid var(--border);
   padding: 8px 4px calc(8px + var(--safe-bottom));
   box-shadow: 0 -1px 8px rgba(0,0,0,0.04);
-}
-
-.navbar-group {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
 }
 
 .navbar-item {
@@ -558,18 +552,22 @@ button {
   white-space: nowrap;
 }
 
+/* Floats clear of the tab row, pinned to the bottom-left of the app column
+   (480px wide at most) rather than the viewport. */
 .navbar-fab {
-  width: 52px;
-  height: 52px;
+  position: fixed;
+  bottom: calc(74px + var(--safe-bottom));
+  left: max(16px, calc(50% - 240px + 16px));
+  z-index: 40;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   background: var(--accent);
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-top: -28px;
   box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
-  flex-shrink: 0;
 }
 
 .navbar-fab-icon {
