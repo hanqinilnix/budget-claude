@@ -240,46 +240,6 @@ button {
   box-shadow: var(--shadow);
 }
 
-/* Category filter */
-.filter-bar {
-  margin-bottom: 16px;
-}
-
-.filter-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 11px 14px;
-  background: var(--surface);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow);
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.filter-count {
-  color: var(--text-muted);
-  font-weight: 600;
-}
-
-.filter-body {
-  margin-top: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.filter-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.category-choice.off {
-  opacity: 0.35;
-}
-
 /* Donut chart */
 .chart-card {
   background: var(--surface);

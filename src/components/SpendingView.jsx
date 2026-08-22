@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useBudget } from '../context/BudgetContext.jsx';
 import DonutChart from './DonutChart.jsx';
 import {
@@ -25,19 +25,6 @@ const PERIODS = [
 const MAX_SLICES = 6;
 const REST_COLOR = '#94a3b8';
 const UNKNOWN_CATEGORY = { name: 'Uncategorized', icon: '❔', color: '#94a3b8' };
-
-// Categories the chart leaves out. Stored as exclusions so a category added
-// later shows up without having to be picked.
-const HIDDEN_KEY = 'budget-hidden-categories';
-
-function loadHidden() {
-  try {
-    const stored = JSON.parse(localStorage.getItem(HIDDEN_KEY) || '[]');
-    return new Set(Array.isArray(stored) ? stored : []);
-  } catch {
-    return new Set();
-  }
-}
 
 function getRange(period, today) {
   if (period === 'day') return { start: today, end: today };
@@ -71,32 +58,15 @@ export default function SpendingView() {
   const { categories, transactions, currency } = useBudget();
   const [period, setPeriod] = useState('rolling');
   const [restExpanded, setRestExpanded] = useState(false);
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [hidden, setHidden] = useState(loadHidden);
-
-  useEffect(() => {
-    localStorage.setItem(HIDDEN_KEY, JSON.stringify([...hidden]));
-  }, [hidden]);
 
   const today = todayISO();
   const range = useMemo(() => getRange(period, today), [period, today]);
-  const shownCount = categories.filter((c) => !hidden.has(c.id)).length;
-
-  const toggleCategory = (id) => {
-    setHidden((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
 
   const rows = useMemo(() => {
     const categoryById = new Map(categories.map((c) => [c.id, c]));
     const totals = new Map();
     for (const t of transactions) {
       if (t.type !== 'expense') continue;
-      if (hidden.has(t.categoryId)) continue;
       if (t.date < range.start || t.date > range.end) continue;
       totals.set(t.categoryId, (totals.get(t.categoryId) || 0) + t.amount);
     }
@@ -107,7 +77,7 @@ export default function SpendingView() {
         category: categoryById.get(categoryId) || UNKNOWN_CATEGORY,
       }))
       .sort((a, b) => b.amount - a.amount);
-  }, [categories, transactions, range, hidden]);
+  }, [categories, transactions, range]);
 
   const total = rows.reduce((sum, r) => sum + r.amount, 0);
   const rest = rows.length > MAX_SLICES ? rows.slice(MAX_SLICES - 1) : [];
@@ -140,46 +110,6 @@ export default function SpendingView() {
         ))}
       </div>
 
-      <div className="filter-bar">
-        <button type="button" className="filter-header" onClick={() => setFilterOpen((v) => !v)}>
-          <span>Categories</span>
-          <span className="filter-count">
-            {shownCount === categories.length ? 'All' : `${shownCount} of ${categories.length}`} {filterOpen ? '▴' : '▾'}
-          </span>
-        </button>
-
-        {filterOpen && (
-          <div className="filter-body">
-            <div className="category-grid">
-              {categories.map((c) => (
-                <button
-                  type="button"
-                  key={c.id}
-                  className={`category-choice ${hidden.has(c.id) ? 'off' : 'selected'}`}
-                  aria-pressed={!hidden.has(c.id)}
-                  onClick={() => toggleCategory(c.id)}
-                >
-                  <span className="category-choice-icon" style={{ background: c.color }}>{c.icon}</span>
-                  <span className="category-choice-name">{c.name}</span>
-                </button>
-              ))}
-            </div>
-            <div className="filter-actions">
-              <button type="button" className="btn small ghost" onClick={() => setHidden(new Set())}>
-                Show all
-              </button>
-              <button
-                type="button"
-                className="btn small ghost"
-                onClick={() => setHidden(new Set(categories.map((c) => c.id)))}
-              >
-                Hide all
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
       <div className="chart-card">
         <DonutChart slices={slices} total={total}>
           <span className="donut-center-label">Spent</span>
@@ -189,11 +119,7 @@ export default function SpendingView() {
       </div>
 
       {total <= 0 ? (
-        <p className="empty-hint">
-          {shownCount === 0
-            ? 'No categories selected. Pick some under Categories above.'
-            : 'No spending recorded for this period. Tap + to add a transaction.'}
-        </p>
+        <p className="empty-hint">No spending recorded for this period. Tap + to add a transaction.</p>
       ) : (
         <section className="section">
           <h2 className="section-title">By category</h2>
