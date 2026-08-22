@@ -17,6 +17,9 @@
   --radius-sm: 8px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+  /* The home indicator only occupies the lower third of the safe area, so the
+     tab row claws back the rest rather than sitting on a thick empty band. */
+  --nav-bottom-pad: max(8px, calc(var(--safe-bottom) - 12px));
 
   color-scheme: light dark;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, system-ui, sans-serif;
@@ -101,14 +104,14 @@ button {
 .app-content {
   flex: 1;
   overflow-y: auto;
-  padding: calc(12px + var(--safe-top)) 16px calc(96px + var(--safe-bottom));
+  padding: calc(12px + var(--safe-top)) 16px calc(96px + var(--nav-bottom-pad));
   -webkit-overflow-scrolling: touch;
 }
 
-/* Clears the floating add button (56px tall, 74px off the bottom) plus a 12px
-   gap, so scrolled-to-bottom content never hides under it. */
+/* Clears the floating add button (56px tall) plus a 12px gap, so content
+   scrolled to the end never hides under it. */
 .app-content.with-fab {
-  padding-bottom: calc(142px + var(--safe-bottom));
+  padding-bottom: calc(142px + var(--nav-bottom-pad));
 }
 
 .view-header {
@@ -528,7 +531,7 @@ button {
   justify-content: space-between;
   background: var(--surface);
   border-top: 1px solid var(--border);
-  padding: 8px 4px calc(8px + var(--safe-bottom));
+  padding: 8px 4px var(--nav-bottom-pad);
   box-shadow: 0 -1px 8px rgba(0,0,0,0.04);
 }
 
@@ -562,7 +565,7 @@ button {
    (480px wide at most) rather than the viewport. */
 .navbar-fab {
   position: fixed;
-  bottom: calc(74px + var(--safe-bottom));
+  bottom: calc(66px + var(--nav-bottom-pad));
   right: max(16px, calc(50% - 240px + 16px));
   z-index: 40;
   width: 56px;
