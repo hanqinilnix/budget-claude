@@ -26,28 +26,17 @@ const MAX_SLICES = 6;
 const REST_COLOR = '#94a3b8';
 const UNKNOWN_CATEGORY = { name: 'Uncategorized', icon: '❔', color: '#94a3b8' };
 
-// Categories the chart leaves out, kept per period. Stored as exclusions so a
-// category added later shows up without having to be picked.
+// Categories the chart leaves out. Stored as exclusions so a category added
+// later shows up without having to be picked.
 const HIDDEN_KEY = 'budget-hidden-categories';
-
-function emptyHidden(fill = []) {
-  return Object.fromEntries(PERIODS.map((p) => [p.key, fill]));
-}
 
 function loadHidden() {
   try {
-    const stored = JSON.parse(localStorage.getItem(HIDDEN_KEY) || 'null');
-    // Older builds stored one flat list shared by every period.
-    if (Array.isArray(stored)) return emptyHidden(stored);
-    if (stored && typeof stored === 'object') {
-      return Object.fromEntries(
-        PERIODS.map((p) => [p.key, Array.isArray(stored[p.key]) ? stored[p.key] : []])
-      );
-    }
+    const stored = JSON.parse(localStorage.getItem(HIDDEN_KEY) || '[]');
+    return new Set(Array.isArray(stored) ? stored : []);
   } catch {
-    // Corrupt entry: fall back to showing everything.
+    return new Set();
   }
-  return emptyHidden();
 }
 
 function getRange(period, today) {
@@ -83,24 +72,23 @@ export default function SpendingView() {
   const [period, setPeriod] = useState('rolling');
   const [restExpanded, setRestExpanded] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
-  const [hiddenByPeriod, setHiddenByPeriod] = useState(loadHidden);
+  const [hidden, setHidden] = useState(loadHidden);
 
   useEffect(() => {
-    localStorage.setItem(HIDDEN_KEY, JSON.stringify(hiddenByPeriod));
-  }, [hiddenByPeriod]);
+    localStorage.setItem(HIDDEN_KEY, JSON.stringify([...hidden]));
+  }, [hidden]);
 
   const today = todayISO();
   const range = useMemo(() => getRange(period, today), [period, today]);
-  const hidden = useMemo(() => new Set(hiddenByPeriod[period] || []), [hiddenByPeriod, period]);
   const shownCount = categories.filter((c) => !hidden.has(c.id)).length;
 
-  // Only ever rewrites the period on screen, so each one keeps its own picks.
-  const setHiddenForPeriod = (next) => {
-    setHiddenByPeriod((prev) => ({ ...prev, [period]: next(prev[period] || []) }));
-  };
-
   const toggleCategory = (id) => {
-    setHiddenForPeriod((list) => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id]));
+    setHidden((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
 
   const rows = useMemo(() => {
@@ -154,7 +142,7 @@ export default function SpendingView() {
 
       <div className="filter-bar">
         <button type="button" className="filter-header" onClick={() => setFilterOpen((v) => !v)}>
-          <span>Categories · {PERIODS.find((p) => p.key === period).label}</span>
+          <span>Categories</span>
           <span className="filter-count">
             {shownCount === categories.length ? 'All' : `${shownCount} of ${categories.length}`} {filterOpen ? '▴' : '▾'}
           </span>
@@ -177,13 +165,13 @@ export default function SpendingView() {
               ))}
             </div>
             <div className="filter-actions">
-              <button type="button" className="btn small ghost" onClick={() => setHiddenForPeriod(() => [])}>
+              <button type="button" className="btn small ghost" onClick={() => setHidden(new Set())}>
                 Show all
               </button>
               <button
                 type="button"
                 className="btn small ghost"
-                onClick={() => setHiddenForPeriod(() => categories.map((c) => c.id))}
+                onClick={() => setHidden(new Set(categories.map((c) => c.id)))}
               >
                 Hide all
               </button>
