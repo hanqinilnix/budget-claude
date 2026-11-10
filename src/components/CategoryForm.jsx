@@ -1,18 +1,17 @@
 import { useState } from 'react';
-import { useBudget } from '../context/BudgetContext.jsx';
+import { useSpending } from '../context/SpendingContext.jsx';
 import Page from './Page.jsx';
 
-const ICON_CHOICES = ['🛒', '🍔', '🚗', '🏠', '💡', '🎬', '💊', '🛍️', '💰', '📦', '✈️', '🎓', '🐾', '🎁', '📱', '💻'];
+const ICON_CHOICES = ['🛒', '🍔', '🚗', '🏠', '💡', '🎬', '💊', '🛍️', '💰', '📦', '✈️', '🎓', '🐾', '🎁', '📱', '💻', '🏨', '🍜', '🚆', '🎟️', '📶', '🛡️'];
 const COLOR_CHOICES = ['#22c55e', '#f97316', '#3b82f6', '#a855f7', '#eab308', '#ec4899', '#14b8a6', '#f43f5e', '#84cc16', '#64748b'];
 
-export default function CategoryForm({ category, onClose }) {
-  const { addCategory, updateCategory, deleteCategory } = useBudget();
+export default function CategoryForm({ category, forTrips = false, onClose }) {
+  const { addCategory, updateCategory, deleteCategory } = useSpending();
   const isEdit = Boolean(category);
 
   const [name, setName] = useState(category?.name || '');
   const [icon, setIcon] = useState(category?.icon || ICON_CHOICES[0]);
   const [color, setColor] = useState(category?.color || COLOR_CHOICES[0]);
-  const [budget, setBudget] = useState(category ? String(category.budget || '') : '');
   const [error, setError] = useState('');
 
   const handleSubmit = async (e, requestClose) => {
@@ -25,12 +24,11 @@ export default function CategoryForm({ category, onClose }) {
       name: name.trim(),
       icon,
       color,
-      budget: parseFloat(budget) || 0,
     };
     if (isEdit) {
       await updateCategory({ ...category, ...payload });
     } else {
-      await addCategory(payload);
+      await addCategory({ ...payload, forTrips });
     }
     requestClose();
   };
@@ -47,11 +45,6 @@ export default function CategoryForm({ category, onClose }) {
           <label className="field">
             <span>Name</span>
             <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Coffee" autoFocus />
-          </label>
-
-          <label className="field">
-            <span>Monthly budget (0 = no budget)</span>
-            <input type="number" inputMode="decimal" step="0.01" min="0" value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="0.00" />
           </label>
 
           <div className="field">

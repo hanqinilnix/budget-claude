@@ -8,7 +8,31 @@ export const CURRENCIES = {
   INR: { symbol: '₹', locale: 'en-IN' },
   AUD: { symbol: 'A$', locale: 'en-AU' },
   CAD: { symbol: 'C$', locale: 'en-CA' },
+  NZD: { symbol: 'NZ$', locale: 'en-NZ' },
+  CHF: { symbol: 'CHF', locale: 'de-CH' },
+  HKD: { symbol: 'HK$', locale: 'en-HK' },
+  TWD: { symbol: 'NT$', locale: 'zh-TW' },
+  KRW: { symbol: '₩', locale: 'ko-KR' },
+  THB: { symbol: '฿', locale: 'th-TH' },
+  MYR: { symbol: 'RM', locale: 'ms-MY' },
+  IDR: { symbol: 'Rp', locale: 'id-ID' },
+  VND: { symbol: '₫', locale: 'vi-VN' },
+  PHP: { symbol: '₱', locale: 'en-PH' },
 };
+
+export function roundCents(value) {
+  return Math.round(value * 100) / 100;
+}
+
+// Five significant figures reads well for 117.84 JPY and 0.7412 USD alike.
+export function roundRate(rate) {
+  return Number(rate.toPrecision(5));
+}
+
+// Written the way a money changer quotes it: 1 SGD = 117.5 JPY.
+export function formatRate(home, rate, foreign) {
+  return `1 ${home} = ${rate} ${foreign}`;
+}
 
 export function formatCurrency(amount, currency = 'USD') {
   const cfg = CURRENCIES[currency] || CURRENCIES.USD;
@@ -71,6 +95,36 @@ export function formatMonthLabel(key) {
 export function formatDateShort(dateStr) {
   const d = new Date(dateStr + 'T00:00:00');
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+export function formatDateWeekday(dateStr, withYear = false) {
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    ...(withYear ? { year: 'numeric' } : {}),
+  });
+}
+
+export function formatDateWithYear(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+// Moves by whole months, landing on the last day when the month is too short.
+export function shiftMonthsISO(dateStr, delta) {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const lastDay = new Date(year, month + delta, 0).getDate();
+  return toISO(new Date(year, month - 1 + delta, Math.min(day, lastDay)));
+}
+
+export function daysBetweenISO(start, end) {
+  const toUTC = (s) => {
+    const [year, month, day] = s.split('-').map(Number);
+    return Date.UTC(year, month - 1, day);
+  };
+  return Math.round((toUTC(end) - toUTC(start)) / 86400000);
 }
 
 export function shiftMonthKey(key, delta) {

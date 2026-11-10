@@ -8,7 +8,7 @@
   --accent: #10b981;
   --accent-dark: #059669;
   --danger: #ef4444;
-  --warn: #f59e0b;
+  --chart-bar: #059669;
   --income: #10b981;
   --expense: #ef4444;
   --shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.08);
@@ -51,6 +51,7 @@
     --text-muted: #9ca3af;
     --border: #2a2c34;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.4);
+    --chart-bar: #10b981;
   }
 }
 
@@ -227,9 +228,6 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
-.summary-card.income .summary-value { color: var(--income); }
-.summary-card.expense .summary-value { color: var(--expense); }
-
 /* Period selector */
 .segmented {
   display: flex;
@@ -318,15 +316,369 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
-.chart-range {
-  font-size: 12px;
+.chart-compare {
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-muted);
+}
+
+.chart-uncounted {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.4;
+}
+
+.form-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 4px 0;
+}
+
+/* Trend bars */
+.trend-card {
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow);
+  padding: 14px;
+}
+
+.trend-plot {
+  position: relative;
+  height: 120px;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.trend-max {
+  position: absolute;
+  top: 2px;
+  right: 0;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+.trend-bars,
+.trend-axis {
+  display: flex;
+  gap: 2px;
+}
+
+.trend-bars {
+  height: 100%;
+  padding-top: 18px;
+}
+
+.trend-column {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.trend-column:disabled {
+  cursor: default;
+}
+
+.trend-bar {
+  display: block;
+  width: 100%;
+  max-width: 22px;
+  border-radius: 4px 4px 0 0;
+  background: var(--chart-bar);
+}
+
+.trend-column.dimmed .trend-bar {
+  opacity: 0.4;
+}
+
+.trend-axis {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.trend-axis span {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  white-space: nowrap;
+  height: 14px;
+  line-height: 14px;
+  /* Lets a two-digit date sit under a thin bar in a 31-day month. */
+  overflow: visible;
+  display: flex;
+  justify-content: center;
+}
+
+.trend-axis span.current {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.trend-caption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 28px;
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.trend-caption b {
+  color: var(--text);
+}
+
+.trend-open {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-dark);
+  padding: 4px 0;
+  white-space: nowrap;
+}
+
+/* Main / trip switch */
+.mode-switch {
+  flex-shrink: 0;
+  padding: calc(var(--safe-top) + 8px) 16px 0;
+  background: var(--bg);
+}
+
+.mode-switch .segmented {
+  margin-bottom: 0;
+}
+
+.mode-switch .segmented button,
+.type-toggle button {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-content.below-switch {
+  border-top: none;
+}
+
+/* Trips */
+.view-title {
+  min-width: 0;
+}
+
+.view-title h1 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.view-sub {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.back-link {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--accent-dark);
+  padding: 4px 0;
+}
+
+.journal-note {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: -8px 0 20px;
+  line-height: 1.4;
+}
+
+.journal-day {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.trip-total {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 8px;
+  margin-bottom: 12px;
+}
+
+.trip-total-value {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+}
+
+.trip-total-note {
+  width: 100%;
+  text-align: right;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.receipt-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.receipt-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px 32px;
+  align-items: center;
+  gap: 8px;
+}
+
+.receipt-item input {
+  min-width: 0;
+  width: 100%;
+}
+
+.receipt-item-remove {
+  width: 32px;
+  height: 44px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.receipt-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.receipt-add {
+  display: block;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.receipt-attached {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.receipt-thumb {
+  width: 64px;
+  height: 84px;
+  padding: 0;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+}
+
+.receipt-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.receipt-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.receipt-actions .btn {
+  cursor: pointer;
+}
+
+.receipt-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: #000;
+}
+
+.receipt-viewer-scroll {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  display: flex;
+  padding-top: var(--safe-top);
+}
+
+.receipt-viewer-scroll img {
+  display: block;
+  margin: auto;
+  max-width: 100%;
+  max-height: 100%;
+  cursor: zoom-in;
+}
+
+/* Twice the screen width, and free of the fit-to-screen limits, so it scrolls. */
+.receipt-viewer-scroll img.zoomed {
+  max-width: none;
+  max-height: none;
+  width: 200%;
+  cursor: zoom-out;
+}
+
+.receipt-viewer-close {
+  position: fixed;
+  top: calc(var(--safe-top) + 12px);
+  right: 12px;
+  z-index: 1;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 18px;
+  color: #fff;
+  background: rgba(40, 40, 40, 0.8);
+}
+
+.day-rate {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-dark);
+  padding: 2px 0 8px;
+}
+
+.journal-actions {
+  display: flex;
+  margin-top: 24px;
+}
+
+.trip-start {
+  width: 100%;
+}
+
+.trip-hint {
+  margin: 12px 0 0;
 }
 
 /* Sections */
 .section {
   margin-bottom: 24px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.section-header .section-title {
+  margin: 0;
 }
 
 .section-title {
@@ -347,69 +699,6 @@ button {
   flex-direction: column;
   gap: 10px;
 }
-
-/* Budget progress */
-.budget-progress {
-  background: var(--surface);
-  border-radius: var(--radius-md);
-  padding: 12px 14px;
-  box-shadow: var(--shadow);
-}
-
-.budget-progress-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-  gap: 8px;
-}
-
-.budget-progress-name {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
-  font-size: 14px;
-  min-width: 0;
-}
-
-.budget-progress-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 15px;
-  flex-shrink: 0;
-}
-
-.budget-progress-amount {
-  font-size: 13px;
-  font-weight: 600;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
-.budget-progress-amount.over-text { color: var(--danger); }
-.budget-progress-total { color: var(--text-muted); font-weight: 500; }
-
-.budget-progress-track {
-  height: 8px;
-  border-radius: 4px;
-  background: var(--surface-alt);
-  overflow: hidden;
-}
-
-.budget-progress-fill {
-  height: 100%;
-  border-radius: 4px;
-  transition: width 0.3s ease;
-}
-
-.budget-progress-fill.ok { background: var(--accent); }
-.budget-progress-fill.warn { background: var(--warn); }
-.budget-progress-fill.over { background: var(--danger); }
 
 /* Transaction list */
 .tx-group-date {
@@ -510,10 +799,28 @@ button {
   white-space: nowrap;
 }
 
+.tx-amounts {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.tx-foreign {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.field-hint {
+  font-size: 12px;
+  font-weight: 500;
+}
+
 .tx-amount.income { color: var(--income); }
 .tx-amount.expense { color: var(--text); }
 
-/* Category row (Budgets view) */
+/* Category and trip rows */
 .category-row {
   display: flex;
   align-items: center;
@@ -829,6 +1136,42 @@ button {
 
 .btn.ghost {
   background: var(--surface-alt);
+  color: var(--text);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+}
+
+.btn.destructive {
+  background: var(--danger);
+  color: white;
+}
+
+.confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.confirm-box {
+  width: 100%;
+  max-width: 340px;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: 18px;
+}
+
+.confirm-message {
+  margin: 0 0 16px;
+  font-size: 15px;
+  line-height: 1.45;
   color: var(--text);
 }
 

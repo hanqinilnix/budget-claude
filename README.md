@@ -1,8 +1,16 @@
-# Budget
+# Spendings
 
-A small offline-first budget tracker: log income/expenses, set a monthly budget per category, and see spent-vs-budget progress at a glance. Built as a PWA so it installs on your phone's home screen and works without a network connection. Tuned for iPhone 13 (390×844) but works on any screen.
+A small offline-first spending tracker: log what you spend, then see it by day, week, month or year, stepping back through any past period. Built as a PWA so it installs on your phone's home screen and works without a network connection. Tuned for iPhone 13 (390×844) but works on any screen.
 
-All data (transactions, categories, currency) is stored locally in the browser via **IndexedDB** — nothing is sent to a server. Use Settings → Export to back up your data as a JSON file.
+All data (spending, trips, categories, currency) is stored locally in the browser via **IndexedDB** — your spending is never sent anywhere. The only network use is looking up exchange rates for trips, which sends just the two currency codes and a date to a free public rates file. Use Settings → Export to back up your data as a JSON file.
+
+## How it's organised
+
+- **Spending** is the main view of everything you've spent: Day, 7 Days, Week, Month and Year, with a comparison against the period before.
+- **History** is the full list of entries, month by month. An entry is either a single amount or a receipt, which lists items with prices and can hold a photo. Only a receipt's total counts towards spending and shows in lists. The app stores its own compressed copy of the photo, because a web app can't keep a lasting link to a file in the phone's photo library.
+- **Trips** are travel journals. Starting one puts the app into that journal in its pre-trip stage, the first day can be in the future, and any number can be planned at once. Once a trip's first day arrives, the app opens on the journal every launch until you end the trip. A switch at the top goes back to the main view at any time. Trip spending also counts in the main view, where each trip shows as a single row. Each trip page splits into Pre-trip, Trip and Post-trip, and every entry records which one it belongs to. Trips have their own categories, separate from everyday ones. A trip can have its own currency, with each day's exchange rate looked up online to convert that day's entries to your home currency, and a finished trip shows the average rate it worked out at. Entries logged offline aren't counted in main totals until their rate can be fetched.
+
+What other trackers offer, and how this one compares, is in [`docs/spending-tracker-research.md`](docs/spending-tracker-research.md).
 
 ## Stack
 
@@ -47,3 +55,5 @@ Everything lives in IndexedDB in your browser, scoped to the deployed site's ori
 
 - Clearing Safari/Chrome site data, or reinstalling the PWA under a different URL, will lose your data.
 - Use **Settings → Export data** to download a JSON backup, and **Import data** to restore it (e.g. after moving to a new phone).
+
+The database and currency setting keep their original `budget-` names so that data saved before the rename carries over.

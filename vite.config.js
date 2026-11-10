@@ -11,9 +11,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icons/apple-touch-icon.png'],
       manifest: {
-        name: 'Budget',
-        short_name: 'Budget',
-        description: 'A simple offline budget tracker with category budgets.',
+        name: 'Spendings Tracker',
+        short_name: 'Spendings Tracker',
+        description: 'A simple offline tracker for daily spending and travel.',
         start_url: '.',
         display: 'standalone',
         background_color: '#0d0e12',

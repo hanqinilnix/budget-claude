@@ -1,11 +1,13 @@
 import { useRef, useState } from 'react';
-import { useBudget } from '../context/BudgetContext.jsx';
+import { useSpending } from '../context/SpendingContext.jsx';
 import { CURRENCIES } from '../utils.js';
+import ConfirmDialog from './ConfirmDialog.jsx';
 
-export default function SettingsView() {
-  const { currency, setCurrency, exportData, importData, clearAllData } = useBudget();
+export default function SettingsView({ onAddCategory, onEditCategory }) {
+  const { categories, currency, setCurrency, exportData, importData, clearAllData } = useSpending();
   const fileInputRef = useRef(null);
   const [message, setMessage] = useState('');
+  const [confirmingClear, setConfirmingClear] = useState(false);
 
   const handleExport = async () => {
     const data = await exportData();
@@ -13,7 +15,7 @@ export default function SettingsView() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `budget-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `spendings-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -40,7 +42,7 @@ export default function SettingsView() {
   };
 
   const handleClear = async () => {
-    if (!window.confirm('This will permanently delete all transactions and categories. Continue?')) return;
+    setConfirmingClear(false);
     await clearAllData();
     setMessage('All data cleared.');
     setTimeout(() => setMessage(''), 4000);
@@ -61,9 +63,32 @@ export default function SettingsView() {
         </select>
       </section>
 
+      {[
+        { title: 'Everyday categories', forTrips: false },
+        { title: 'Travel categories', forTrips: true },
+      ].map((group) => (
+        <section key={group.title} className="section">
+          <div className="section-header">
+            <h2 className="section-title">{group.title}</h2>
+            <button type="button" className="btn small primary" onClick={() => onAddCategory(group.forTrips)} aria-label={`Add to ${group.title}`}>+ Category</button>
+          </div>
+          <div className="card-list">
+            {categories.filter((c) => Boolean(c.forTrips) === group.forTrips).map((c) => (
+              <button key={c.id} type="button" className="category-row" onClick={() => onEditCategory(c)}>
+                <span className="tx-icon" style={{ background: c.color }}>{c.icon}</span>
+                <span className="tx-info">
+                  <span className="tx-name">{c.name}</span>
+                </span>
+                <span className="category-chevron">›</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      ))}
+
       <section className="section">
         <h2 className="section-title">Backup</h2>
-        <p className="settings-hint">Your data is stored only on this device. Export a backup regularly, especially before clearing browser data.</p>
+        <p className="settings-hint">Your data is stored only on this device. Export a backup regularly, especially before clearing browser data. Backups include your receipt photos, so they can get large.</p>
         <div className="settings-actions">
           <button type="button" className="btn primary" onClick={handleExport}>Export data (.json)</button>
           <button type="button" className="btn ghost" onClick={handleImportClick}>Import data</button>
@@ -73,12 +98,21 @@ export default function SettingsView() {
 
       <section className="section">
         <h2 className="section-title">Danger zone</h2>
-        <button type="button" className="btn danger" onClick={handleClear}>Clear all data</button>
+        <button type="button" className="btn danger" onClick={() => setConfirmingClear(true)}>Clear all data</button>
       </section>
+
+      {confirmingClear && (
+        <ConfirmDialog
+          message="This will permanently delete all spending, trips and categories."
+          confirmLabel="Clear all data"
+          onCancel={() => setConfirmingClear(false)}
+          onConfirm={handleClear}
+        />
+      )}
 
       {message && <p className="settings-message">{message}</p>}
 
-      <p className="settings-footer">Budget PWA · works offline · your data never leaves this device</p>
+      <p className="settings-footer">Spendings · works offline · your data stays on this device, and only currency codes and dates go out to look up exchange rates</p>
     </div>
   );
 }
