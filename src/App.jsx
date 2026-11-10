@@ -79,6 +79,13 @@ function AppShell() {
     setJournalPhase('pre');
   };
 
+  // A trip started or opened this session is still the opened trip when it
+  // ends, and would otherwise stay on screen.
+  const leaveEndedTrip = () => {
+    setOpenedTripId(null);
+    setChosenSide('main');
+  };
+
   const backToTrips = () => {
     setOpenedTripId(null);
     setChosenSide('main');
@@ -142,6 +149,7 @@ function AppShell() {
             onEditJournal={(j) => setTripFormState({ journal: j })}
             onEditDayRate={(j, date) => setDayRateState({ journal: j, date })}
             onBack={openedTrip ? backToTrips : null}
+            onBeforeEnd={leaveEndedTrip}
             onBeforeReopen={enterActiveTrip}
           />
         ) : (

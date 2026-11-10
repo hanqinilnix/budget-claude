@@ -9,7 +9,7 @@ import ConfirmDialog from './ConfirmDialog.jsx';
 import TransactionRow from './TransactionRow.jsx';
 import TrendBars from './TrendBars.jsx';
 
-export default function JournalView({ journal, phase: phaseKey, onPhaseChange, onEditTransaction, onEditJournal, onEditDayRate, onBack, onBeforeReopen }) {
+export default function JournalView({ journal, phase: phaseKey, onPhaseChange, onEditTransaction, onEditJournal, onEditDayRate, onBack, onBeforeEnd, onBeforeReopen }) {
   const { categoryById, transactions, activeJournal, updateJournal, currency } = useSpending();
   const today = todayISO();
   const isOpen = !journal.endDate;
@@ -93,6 +93,7 @@ export default function JournalView({ journal, phase: phaseKey, onPhaseChange, o
     : '';
 
   const endTrip = async () => {
+    onBeforeEnd();
     await updateJournal({ ...journal, endDate: today });
   };
 
