@@ -1,7 +1,8 @@
-// Draws the home-screen icons: a black pie on butter, with one slice pulled
-// out in honey. Run with `node scripts/draw-icons.mjs`. Plain Node, no image
-// libraries: each pixel is sampled 4x4 times for smooth edges, then written
-// as a PNG.
+// Draws the home-screen icons as the app's own day chart: black columns on
+// butter, today's column in honey outlined in black, standing on a black
+// baseline, as on the Week screen. Run with `node scripts/draw-icons.mjs`.
+// Plain Node, no image libraries: each pixel is sampled 4x4 times for smooth
+// edges, then written as a PNG.
 import { writeFileSync } from 'node:fs';
 import { deflateSync } from 'node:zlib';
 
@@ -9,31 +10,46 @@ const BUTTER = [0xff, 0xf1, 0xa8];
 const HONEY = [0xff, 0xdf, 0x6b];
 const BLACK = [0x00, 0x00, 0x00];
 
-// Shapes in a unit square, (0,0) top left. The pie fills most of the icon;
-// the maskable icon keeps it inside the safe circle, which is 80% wide.
-function colourAt(x, y, scale) {
-  const cx = 0.5 - 0.02 * scale; // nudged down and left, to balance the slice
-  const cy = 0.5 + 0.02 * scale;
-  const r = 0.33 * scale;
-  // The slice runs from 12 o'clock to 3 o'clock and is pushed out along 1:30.
-  const push = 0.045 * scale;
-  const sx = cx + push * Math.SQRT1_2;
-  const sy = cy - push * Math.SQRT1_2;
+// Column heights as a share of the tallest, left to right. The fourth is today.
+const COLUMNS = [0.42, 0.68, 0.3, 1, 0.55];
+const TODAY = 3;
 
-  const inSlice = (px, py, radius) => {
-    const dx = px - sx;
-    const dy = py - sy;
-    return dx >= 0 && dy <= 0 && dx * dx + dy * dy <= radius * radius;
-  };
-  const inPie = (px, py, radius) => {
-    const dx = px - cx;
-    const dy = py - cy;
-    return !(dx >= 0 && dy <= 0) && dx * dx + dy * dy <= radius * radius;
-  };
+// Inside a rectangle whose top corners are rounded by radius r.
+function inColumn(x, y, left, right, top, bottom, r) {
+  if (x < left || x > right || y < top || y > bottom) return false;
+  const cy = top + r;
+  if (y >= cy) return true;
+  const cx = x < left + r ? left + r : x > right - r ? right - r : x;
+  return (x - cx) ** 2 + (y - cy) ** 2 <= r * r;
+}
 
-  const ring = 0.028 * scale;
-  if (inSlice(x, y, r)) return inSlice(x, y, r - ring) && x - sx > ring && sy - y > ring ? HONEY : BLACK;
-  if (inPie(x, y, r)) return BLACK;
+// Shapes in a unit square, (0,0) top left, drawn around the centre at the
+// given scale. The maskable icon uses 0.8, keeping the chart inside its safe
+// circle.
+function colourAt(ux, uy, scale) {
+  const x = 0.5 + (ux - 0.5) / scale;
+  const y = 0.5 + (uy - 0.5) / scale;
+
+  const left = 0.2;
+  const right = 0.8;
+  const baseline = 0.74;
+  const rule = 0.036;
+  const tallest = 0.5;
+  const gap = 0.035;
+  const width = (right - left - gap * (COLUMNS.length - 1)) / COLUMNS.length;
+  const radius = 0.03;
+  const outline = 0.026;
+
+  if (y >= baseline && y <= baseline + rule && x >= left - 0.04 && x <= right + 0.04) return BLACK;
+
+  for (let i = 0; i < COLUMNS.length; i++) {
+    const l = left + i * (width + gap);
+    const r = l + width;
+    const top = baseline - tallest * COLUMNS[i];
+    if (!inColumn(x, y, l, r, top, baseline, radius)) continue;
+    if (i !== TODAY) return BLACK;
+    return inColumn(x, y, l + outline, r - outline, top + outline, baseline, Math.max(radius - outline, 0.004)) ? HONEY : BLACK;
+  }
   return BUTTER;
 }
 
