@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { resetPageScroll } from '../viewport.js';
 
 const TRANSITION_DURATION = 200;
 
@@ -36,9 +37,15 @@ export function useDismissablePhase(onClose) {
 
   useEffect(() => () => clearTimeout(closeTimeoutRef.current), []);
 
+  // The keyboard starts going away with the page rather than after it, and
+  // whatever it slid upwards is put back before the tabs return.
   const requestClose = useCallback(() => {
+    document.activeElement?.blur?.();
     setPhase('closing');
-    closeTimeoutRef.current = setTimeout(onClose, TRANSITION_DURATION);
+    closeTimeoutRef.current = setTimeout(() => {
+      resetPageScroll();
+      onClose();
+    }, TRANSITION_DURATION);
   }, [onClose]);
 
   return { phase, requestClose };
