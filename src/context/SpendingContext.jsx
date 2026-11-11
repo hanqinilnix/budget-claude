@@ -68,6 +68,7 @@ export function SpendingProvider({ children }) {
       updateJournal: thenReload(db.updateJournal),
       deleteJournal: thenReload(db.deleteJournal),
       importData: thenReload(db.importAllData),
+      importCsvRows: thenReload(db.addCsvRows),
       clearAllData: thenReload(db.clearAllData),
       exportData: db.exportAllData,
     };

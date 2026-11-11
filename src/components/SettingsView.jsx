@@ -1,11 +1,13 @@
 import { useRef, useState } from 'react';
 import { useSpending } from '../context/SpendingContext.jsx';
+import { parseSpendingsCsv } from '../csvImport.js';
 import { CURRENCIES } from '../utils.js';
 import ConfirmDialog from './ConfirmDialog.jsx';
 
 export default function SettingsView({ onAddCategory, onEditCategory }) {
-  const { categories, currency, setCurrency, exportData, importData, clearAllData } = useSpending();
+  const { categories, currency, setCurrency, exportData, importData, importCsvRows, clearAllData } = useSpending();
   const fileInputRef = useRef(null);
+  const csvInputRef = useRef(null);
   const [message, setMessage] = useState('');
   const [confirmingClear, setConfirmingClear] = useState(false);
 
@@ -38,6 +40,25 @@ export default function SettingsView({ onAddCategory, onEditCategory }) {
     } finally {
       e.target.value = '';
       setTimeout(() => setMessage(''), 4000);
+    }
+  };
+
+  const handleCsvFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const rows = parseSpendingsCsv(await file.text());
+      const { added, skipped, newCategories } = await importCsvRows(rows);
+      setMessage([
+        `Added ${added.toLocaleString()} ${added === 1 ? 'entry' : 'entries'}`,
+        newCategories > 0 && `${newCategories} new ${newCategories === 1 ? 'category' : 'categories'}`,
+        skipped > 0 && `skipped ${skipped.toLocaleString()} already here`,
+      ].filter(Boolean).join(', ') + '.');
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      e.target.value = '';
+      setTimeout(() => setMessage(''), 6000);
     }
   };
 
@@ -90,9 +111,18 @@ export default function SettingsView({ onAddCategory, onEditCategory }) {
         <h2 className="section-title">Backup</h2>
         <p className="settings-hint">Your data is stored only on this device. Export a backup regularly, especially before clearing browser data. Backups include your receipt photos, so they can get large.</p>
         <div className="settings-actions">
-          <button type="button" className="btn primary" onClick={handleExport}>Export data (.json)</button>
-          <button type="button" className="btn ghost" onClick={handleImportClick}>Import data</button>
+          <button type="button" className="btn primary" onClick={handleExport}>Export a backup</button>
+          <button type="button" className="btn ghost" onClick={handleImportClick}>Import a backup</button>
           <input ref={fileInputRef} type="file" accept="application/json" hidden onChange={handleImportFile} />
+        </div>
+      </section>
+
+      <section className="section">
+        <h2 className="section-title">Spreadsheet</h2>
+        <p className="settings-hint">Add entries from a .csv file with date, category and amount columns, and optionally remarks. This keeps what's already here and skips rows it has seen before.</p>
+        <div className="settings-actions">
+          <button type="button" className="btn ghost" onClick={() => csvInputRef.current?.click()}>Import a spreadsheet</button>
+          <input ref={csvInputRef} type="file" accept=".csv,text/csv" hidden onChange={handleCsvFile} />
         </div>
       </section>
 

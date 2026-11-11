@@ -1,4 +1,5 @@
 import { openDB } from 'idb';
+import { newCategoryFromCsv } from './csvImport.js';
 import { roundCents } from './utils.js';
 
 // Keeps the old name on purpose: renaming the database would strand everything
@@ -244,6 +245,58 @@ export async function importAllData(data) {
   }
   await tx.done;
   await seedDefaultCategoriesIfEmpty();
+}
+
+// Adds to what's already saved, unlike importAllData, which replaces it. Rows
+// that are already saved are skipped, so importing a sheet again after adding
+// to it brings in only the new rows. Matches are counted rather than just
+// looked up, because buying the same lunch twice in a day is two real entries.
+export async function addCsvRows(rows) {
+  const db = await getDB();
+  const tx = db.transaction(['categories', 'transactions'], 'readwrite');
+  const categories = tx.objectStore('categories');
+  const transactions = tx.objectStore('transactions');
+
+  const categoryIds = new Map();
+  for (const c of await categories.getAll()) {
+    if (!c.forTrips) categoryIds.set(c.name.toLowerCase(), c.id);
+  }
+
+  const keyOf = (t) => [t.date, t.categoryId, t.amount, t.note].join('|');
+  const saved = new Map();
+  for (const t of await transactions.getAll()) saved.set(keyOf(t), (saved.get(keyOf(t)) ?? 0) + 1);
+
+  const result = { added: 0, skipped: 0, newCategories: 0 };
+  for (const row of rows) {
+    const name = row.category.toLowerCase();
+    if (!categoryIds.has(name)) {
+      categoryIds.set(name, await categories.add(newCategoryFromCsv(row.category)));
+      result.newCategories++;
+    }
+    const entry = {
+      receiptId: null,
+      items: null,
+      type: 'expense',
+      amount: row.amount,
+      foreignAmount: null,
+      foreignCurrency: null,
+      categoryId: categoryIds.get(name),
+      date: row.date,
+      note: row.note,
+      journalId: null,
+      phase: null,
+    };
+    const matches = saved.get(keyOf(entry)) ?? 0;
+    if (matches > 0) {
+      saved.set(keyOf(entry), matches - 1);
+      result.skipped++;
+    } else {
+      await transactions.add(entry);
+      result.added++;
+    }
+  }
+  await tx.done;
+  return result;
 }
 
 export async function clearAllData() {

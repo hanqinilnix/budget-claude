@@ -54,6 +54,7 @@ Once deployed, open the site in Safari on your iPhone, tap the Share icon, then 
 Everything lives in IndexedDB in your browser, scoped to the deployed site's origin. That means:
 
 - Clearing Safari/Chrome site data, or reinstalling the PWA under a different URL, will lose your data.
-- Use **Settings → Export data** to download a JSON backup, and **Import data** to restore it (e.g. after moving to a new phone).
+- Use **Settings → Export a backup** to download a JSON backup, and **Import a backup** to restore it (e.g. after moving to a new phone). Restoring replaces everything in the app.
+- Use **Settings → Import a spreadsheet** to add entries from a CSV with `date`, `category` and `amount` columns, and optionally `remarks`. It keeps existing data, creates any missing categories, and skips rows already saved.
 
 The database and currency setting keep their original `budget-` names so that data saved before the rename carries over.
