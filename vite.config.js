@@ -16,8 +16,8 @@ export default defineConfig({
         description: 'A simple offline tracker for daily spending and travel.',
         start_url: '.',
         display: 'standalone',
-        background_color: '#0d0e12',
-        theme_color: '#10b981',
+        background_color: '#ffffff',
+        theme_color: '#fff1a8',
         orientation: 'portrait',
         icons: [
           { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
@@ -26,7 +26,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
+        globPatterns: ['**/*.{js,css,html,png,svg,ico,woff2}'],
       },
     }),
   ],
