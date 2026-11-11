@@ -54,29 +54,33 @@ export default function TripForm({ journal, onClose, onStarted }) {
   };
 
   return (
-    <Page onClose={onClose}>
+    <Page onClose={onClose} className="trip">
       {(requestClose) => (
-        <form onSubmit={(e) => handleSubmit(e, requestClose)} className="tx-form">
-          <label className="field">
-            <span>Trip name</span>
-            <input type="text" placeholder="e.g. Kyushu" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
-          </label>
+        <form onSubmit={(e) => handleSubmit(e, requestClose)}>
+          <header className="top">
+            <div className="title">
+              <h1>{isEdit ? 'Edit trip' : 'Start a trip'}</h1>
+              <button type="button" className="pill" onClick={requestClose}>Cancel</button>
+            </div>
+            {!isEdit && <div className="note">It begins as a plan, and starts by itself on its first day.</div>}
+          </header>
 
-          <label className="field">
-            <span>First day</span>
-            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-          </label>
+          <div className="body">
+            <label className="lbl" htmlFor="trip-name">Trip name</label>
+            <input id="trip-name" className="input" type="text" placeholder="e.g. Kyushu" value={name} onChange={(e) => setName(e.target.value)} autoFocus={!isEdit} />
 
-          {hasEnded && (
-            <label className="field">
-              <span>Last day</span>
-              <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} max={todayISO()} />
-            </label>
-          )}
+            <label className="lbl" htmlFor="trip-start">First day</label>
+            <input id="trip-start" className="input" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
 
-          <label className="field">
-            <span>Currency on this trip</span>
-            <select value={tripCurrency} onChange={(e) => setTripCurrency(e.target.value)} disabled={foreignEntries.length > 0}>
+            {hasEnded && (
+              <>
+                <label className="lbl" htmlFor="trip-end">Last day</label>
+                <input id="trip-end" className="input" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} max={todayISO()} />
+              </>
+            )}
+
+            <label className="lbl" htmlFor="trip-currency">Currency on this trip</label>
+            <select id="trip-currency" className="input" value={tripCurrency} onChange={(e) => setTripCurrency(e.target.value)} disabled={foreignEntries.length > 0}>
               <option value="">Same as home ({homeCurrency})</option>
               {Object.keys(CURRENCIES)
                 .filter((code) => code !== homeCurrency)
@@ -84,32 +88,21 @@ export default function TripForm({ journal, onClose, onStarted }) {
             </select>
             {foreignEntries.length > 0 && <span className="field-hint">Fixed now that entries are logged in it.</span>}
             {!isEdit && tripCurrency && <span className="field-hint">Each day's exchange rate is looked up for you.</span>}
-          </label>
 
-          {error && <p className="form-error">{error}</p>}
+            {error && <p className="form-error" role="alert">{error}</p>}
 
-          <div className="form-actions">
-            {isEdit && (
-              <button type="button" className="btn danger" onClick={() => setConfirmingDelete(true)}>
-                Delete
-              </button>
+            <button type="submit" className="cta">{isEdit ? 'Save changes' : 'Start planning'}</button>
+            {isEdit && <button type="button" className="text-btn" onClick={() => setConfirmingDelete(true)}>Delete trip</button>}
+
+            {confirmingDelete && (
+              <ConfirmDialog
+                message={`Delete "${journal.name}"? Its entries stay in your spending as ordinary entries.${deleteWarning}`}
+                confirmLabel="Delete trip"
+                onCancel={() => setConfirmingDelete(false)}
+                onConfirm={() => handleDelete(requestClose)}
+              />
             )}
-            <button type="button" className="btn ghost" onClick={requestClose}>
-              Cancel
-            </button>
-            <button type="submit" className="btn primary">
-              {isEdit ? 'Save' : 'Start pre-trip'}
-            </button>
           </div>
-
-          {confirmingDelete && (
-            <ConfirmDialog
-              message={`Delete "${journal.name}"? Its entries stay in your main spending as ordinary entries.${deleteWarning}`}
-              confirmLabel="Delete trip"
-              onCancel={() => setConfirmingDelete(false)}
-              onConfirm={() => handleDelete(requestClose)}
-            />
-          )}
         </form>
       )}
     </Page>

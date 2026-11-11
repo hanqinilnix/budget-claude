@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useSpending } from '../context/SpendingContext.jsx';
 import { latestRateBefore } from '../journals.js';
-import { formatCurrency, formatDateWeekday, roundCents } from '../utils.js';
+import { formatCurrency, formatWeekdayDayMonth, roundCents } from '../utils.js';
 import Page from './Page.jsx';
 
 export default function DayRateForm({ journal, date, onClose }) {
@@ -26,26 +26,29 @@ export default function DayRateForm({ journal, date, onClose }) {
   };
 
   return (
-    <Page onClose={onClose}>
+    <Page onClose={onClose} className="trip">
       {(requestClose) => (
-        <form onSubmit={(e) => handleSubmit(e, requestClose)} className="tx-form">
-          <h1 className="form-title">{formatDateWeekday(date)}</h1>
+        <form onSubmit={(e) => handleSubmit(e, requestClose)}>
+          <header className="top">
+            <div className="title">
+              <h1>Exchange rate</h1>
+              <button type="button" className="pill" onClick={requestClose}>Cancel</button>
+            </div>
+            <div className="note">{journal.name}, {formatWeekdayDayMonth(date)}</div>
+          </header>
 
-          <label className="field">
-            <span>Exchange rate: 1 {currency} = ? {journal.currency}</span>
-            <input type="number" inputMode="decimal" step="any" min="0" placeholder="e.g. 117.5" value={rate} onChange={(e) => setRate(e.target.value)} autoFocus />
+          <div className="body">
+            <label className="lbl" htmlFor="day-rate">1 {currency} = how many {journal.currency}?</label>
+            <input id="day-rate" className="input" type="text" inputMode="decimal" placeholder="e.g. 117.5" value={rate} onChange={(e) => setRate(e.target.value.replace(/[^\d.]/g, ''))} autoFocus />
             {parsed > 0 && (
               <span className="field-hint">
                 {formatCurrency(dayForeign, journal.currency)} on this day comes to about {formatCurrency(roundCents(dayForeign / parsed), currency)}
               </span>
             )}
-          </label>
 
-          {error && <p className="form-error">{error}</p>}
+            {error && <p className="form-error" role="alert">{error}</p>}
 
-          <div className="form-actions">
-            <button type="button" className="btn ghost" onClick={requestClose}>Cancel</button>
-            <button type="submit" className="btn primary">Save</button>
+            <button type="submit" className="cta">Save rate</button>
           </div>
         </form>
       )}

@@ -12,12 +12,6 @@ export function latestRateBefore(journal, date) {
   return previous ? { date: previous, rate: rates[previous] } : null;
 }
 
-export const TRIP_PHASES = [
-  { key: 'pre', label: 'Pre-trip' },
-  { key: 'trip', label: 'Trip' },
-  { key: 'post', label: 'Post-trip' },
-];
-
 // Where a trip has got to as of a date.
 export function stageOf(journal, today) {
   if (journal.endDate) return 'post';

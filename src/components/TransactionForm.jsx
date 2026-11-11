@@ -1,16 +1,34 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSpending } from '../context/SpendingContext.jsx';
 import { fetchDailyRate } from '../exchangeRates.js';
-import { TRIP_PHASES, phaseOf, stageOf } from '../journals.js';
+import { phaseOf } from '../journals.js';
 import { shrinkReceiptImage } from '../receipts.js';
-import { formatCurrency, formatDateShort, formatRate, roundCents, todayISO } from '../utils.js';
+import { CURRENCIES, addDaysISO, formatCurrency, formatDayMonth, formatRate, roundCents, todayISO } from '../utils.js';
 import Page from './Page.jsx';
 import ReceiptField from './ReceiptField.jsx';
 
-export default function TransactionForm({ transaction, defaultJournalId = null, defaultDate = null, defaultPaidHome = false, defaultPhase = null, onClose }) {
+const PARTS = [
+  { key: 'pre', label: 'Before' },
+  { key: 'trip', label: 'During' },
+  { key: 'post', label: 'After' },
+  { key: 'none', label: 'Not this trip' },
+];
+
+const MONEY_ICONS = { JPY: '💴', CNY: '💴', EUR: '💶', GBP: '💷' };
+const moneyIcon = (code) => MONEY_ICONS[code] ?? (CURRENCIES[code]?.symbol.includes('$') ? '💵' : '💱');
+
+// Typed amounts stay as text, so a half-typed "1." isn't reformatted.
+const cleanAmount = (text) => text.replace(/,/g, '.').replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1');
+
+// One row of answers under the amount: when, which currency, which part of
+// the trip, and whether it's split into items. Each starts as the likeliest
+// answer, so most entries need none of them touched, and one that has been
+// changed turns honey.
+export default function TransactionForm({ transaction, tripId = null, defaults = null, onClose }) {
   const {
     categories,
     currency,
+    transactions,
     journalById,
     activeJournal,
     addTransaction,
@@ -21,32 +39,46 @@ export default function TransactionForm({ transaction, defaultJournalId = null, 
     deleteReceipt,
   } = useSpending();
   const isEdit = Boolean(transaction);
+  const today = todayISO();
 
-  const savedJournalId = isEdit ? transaction.journalId : defaultJournalId;
   // The trip this entry can belong to: its own, or else whichever is open.
-  const trip = journalById.get(savedJournalId) ?? activeJournal;
-
+  const trip = journalById.get(isEdit ? transaction.journalId : tripId) ?? activeJournal ?? null;
   const foreignCurrency = transaction?.foreignCurrency ?? trip?.currency ?? null;
   const canPayForeign = Boolean(foreignCurrency);
 
+  // What each answer started as, so a changed one can be marked.
+  const [start] = useState(() => {
+    const inSavedTrip = isEdit && transaction.journalId != null && journalById.has(transaction.journalId);
+    return {
+      date: transaction?.date ?? today,
+      part: !trip ? 'none' : isEdit ? (inSavedTrip ? phaseOf(trip, transaction) : 'none') : (defaults?.part ?? 'none'),
+      paidForeign: isEdit ? transaction.foreignCurrency != null : canPayForeign && Boolean(defaults?.paidForeign),
+      itemized: Boolean(transaction?.items?.length || transaction?.receiptId),
+    };
+  });
+
+  // Newest-used first, so the category you want is usually already chosen.
+  const lastUsed = useMemo(() => {
+    const map = new Map();
+    for (const t of transactions) if (!map.has(t.categoryId) || map.get(t.categoryId) < t.date) map.set(t.categoryId, t.date);
+    return map;
+  }, [transactions]);
   // Income entries from before this became a spending-only tracker can still
   // be edited, but nothing new gets filed under Income.
-  const categoriesFor = (forTrip) => categories.filter((c) => Boolean(c.forTrips) === forTrip && c.name !== 'Income');
-  const startsInTrip = journalById.has(savedJournalId);
+  const categoriesFor = (forTrip) =>
+    categories
+      .filter((c) => Boolean(c.forTrips) === forTrip && c.name !== 'Income')
+      .sort((a, b) => (lastUsed.get(b.id) ?? '').localeCompare(lastUsed.get(a.id) ?? ''));
 
   const itemKey = useRef(0);
   const newItem = (name = '', price = '') => ({ key: ++itemKey.current, name, price });
 
-  const [mode, setMode] = useState(transaction?.items?.length || transaction?.receiptId ? 'receipt' : 'entry');
-  const [inTrip, setInTrip] = useState(startsInTrip);
-  const [phase, setPhase] = useState(() => {
-    if (transaction && trip) return phaseOf(trip, transaction);
-    return defaultPhase ?? (trip ? stageOf(trip, todayISO()) : 'trip');
-  });
-  const [paidForeign, setPaidForeign] = useState(isEdit ? transaction.foreignCurrency != null : canPayForeign && !defaultPaidHome);
+  const [part, setPart] = useState(start.part);
+  const [paidForeign, setPaidForeign] = useState(start.paidForeign);
+  const [itemized, setItemized] = useState(start.itemized);
+  const [date, setDate] = useState(start.date);
   const [amount, setAmount] = useState(transaction ? String(transaction.foreignAmount ?? transaction.amount) : '');
-  // Prices are in whichever currency the receipt was paid in. Kept as typed
-  // text, like the amount, so a half-typed "1." isn't reformatted.
+  // Prices are in whichever currency the receipt was paid in.
   const [items, setItems] = useState(() => {
     if (transaction?.items?.length) return transaction.items.map((i) => newItem(i.name, String(i.price)));
     // A photo saved before receipts had items opens with its total as one line.
@@ -54,8 +86,7 @@ export default function TransactionForm({ transaction, defaultJournalId = null, 
     return [newItem()];
   });
   const [focusItemKey, setFocusItemKey] = useState(null);
-  const [categoryId, setCategoryId] = useState(transaction?.categoryId ?? categoriesFor(startsInTrip)[0]?.id ?? '');
-  const [date, setDate] = useState(transaction?.date || defaultDate || todayISO());
+  const [categoryId, setCategoryId] = useState(transaction?.categoryId ?? categoriesFor(start.part !== 'none')[0]?.id ?? '');
   const [lookup, setLookup] = useState(null); // { date, rate } from the last rate lookup
   const [note, setNote] = useState(transaction?.note || '');
   const [error, setError] = useState('');
@@ -63,7 +94,7 @@ export default function TransactionForm({ transaction, defaultJournalId = null, 
   const [savedReceiptRemoved, setSavedReceiptRemoved] = useState(false);
   const [receiptBusy, setReceiptBusy] = useState(false);
 
-  const isReceipt = mode === 'receipt';
+  const inTrip = part !== 'none';
   const savedReceiptId = savedReceiptRemoved ? null : (transaction?.receiptId ?? null);
 
   const pickReceipt = async (file) => {
@@ -99,7 +130,7 @@ export default function TransactionForm({ transaction, defaultJournalId = null, 
 
   const ownCategory = categories.find((c) => c.id === transaction?.categoryId);
   const visibleCategories = categoriesFor(inTrip);
-  if (ownCategory && !visibleCategories.includes(ownCategory)) visibleCategories.push(ownCategory);
+  if (ownCategory && !visibleCategories.includes(ownCategory)) visibleCategories.unshift(ownCategory);
 
   // One rate per day: the one saved for that date, or else looked up for it.
   const dailyRates = trip?.dailyRates ?? {};
@@ -123,13 +154,14 @@ export default function TransactionForm({ transaction, defaultJournalId = null, 
   }, [usesForeign, savedDayRate, currency, foreignCurrency, date]);
 
   const itemsTotal = roundCents(items.reduce((sum, i) => sum + (parseFloat(i.price) > 0 ? parseFloat(i.price) : 0), 0));
-  const typedAmount = isReceipt ? itemsTotal : parseFloat(amount);
+  const typedAmount = itemized ? itemsTotal : parseFloat(amount);
   const amountCurrency = usesForeign ? foreignCurrency : currency;
 
   // Keeps the same money when the currency being typed in changes, so 4000 JPY
   // doesn't quietly become 4000 SGD. With no rate to convert with, the numbers
   // would be wrong in the other currency, so they're cleared instead.
-  const changePayment = (nextInTrip, nextPaidForeign) => {
+  const changePayment = (nextPart, nextPaidForeign) => {
+    const nextInTrip = nextPart !== 'none';
     const nextUsesForeign = nextInTrip && nextPaidForeign && canPayForeign;
     if (nextUsesForeign !== usesForeign) {
       const convert = (text) => {
@@ -151,14 +183,28 @@ export default function TransactionForm({ transaction, defaultJournalId = null, 
       const nextCategories = categoriesFor(nextInTrip);
       if (!nextCategories.some((c) => c.id === categoryId)) setCategoryId(nextCategories[0]?.id ?? '');
     }
-    setInTrip(nextInTrip);
+    setPart(nextPart);
     setPaidForeign(nextPaidForeign);
+  };
+
+  const stepPart = () => {
+    const next = PARTS[(PARTS.findIndex((p) => p.key === part) + 1) % PARTS.length].key;
+    changePayment(next, paidForeign);
+  };
+
+  // Turning items on starts the list from the amount already typed.
+  const toggleItems = () => {
+    if (!itemized && !items.some((i) => i.name || i.price) && parseFloat(amount) > 0) {
+      setItems([newItem('', amount)]);
+    }
+    if (itemized && itemsTotal > 0) setAmount(String(itemsTotal));
+    setItemized(!itemized);
   };
 
   const handleSubmit = async (e, requestClose) => {
     e.preventDefault();
     const filledItems = items.filter((i) => i.name.trim() || i.price !== '');
-    if (isReceipt) {
+    if (itemized) {
       const unpriced = filledItems.find((i) => !(parseFloat(i.price) > 0));
       if (unpriced) {
         setError(`Enter a price for ${unpriced.name.trim() || 'every item'}`);
@@ -176,13 +222,13 @@ export default function TransactionForm({ transaction, defaultJournalId = null, 
       setError('Choose a category');
       return;
     }
-    const parsed = typedAmount;
+    const parsed = roundCents(typedAmount);
     // Stored only now, so cancelling the form leaves no stray photo behind.
-    // A photo belongs to receipt mode, so saving as a plain entry drops it.
-    const receiptId = !isReceipt ? null : pendingReceipt ? await addReceipt(pendingReceipt) : savedReceiptId;
+    // A photo belongs with items, so saving as a single amount drops it.
+    const receiptId = !itemized ? null : pendingReceipt ? await addReceipt(pendingReceipt) : savedReceiptId;
     const payload = {
       receiptId,
-      items: isReceipt ? filledItems.map((i) => ({ name: i.name.trim(), price: parseFloat(i.price) })) : null,
+      items: itemized ? filledItems.map((i) => ({ name: i.name.trim(), price: parseFloat(i.price) })) : null,
       type: transaction?.type || 'expense',
       // amount is always home currency, so every total adds up without converting.
       // It stays 0 for foreign entries until their day has a rate.
@@ -193,7 +239,7 @@ export default function TransactionForm({ transaction, defaultJournalId = null, 
       date,
       note: note.trim(),
       journalId: inTrip ? trip.id : null,
-      phase: inTrip ? phase : null,
+      phase: inTrip ? part : null,
     };
     if (isEdit) {
       await updateTransaction({ ...transaction, ...payload });
@@ -214,82 +260,86 @@ export default function TransactionForm({ transaction, defaultJournalId = null, 
     requestClose();
   };
 
-  const conversionHint = usesForeign && typedAmount > 0 && rate && (
-    <span className="field-hint">
-      About {formatCurrency(roundCents(typedAmount / rate), currency)}
-    </span>
-  );
-
-  const noteField = (
-    <label className="field">
-      <span>{isReceipt ? 'Store (optional)' : 'Note (optional)'}</span>
-      <input
-        type="text"
-        placeholder={isReceipt ? 'e.g. FairPrice' : 'e.g. Weekly groceries'}
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-      />
-    </label>
-  );
+  const filledCount = items.filter((i) => parseFloat(i.price) > 0).length;
+  const dateLabel = date === today ? 'Today' : date === addDaysISO(today, -1) ? 'Yesterday' : formatDayMonth(date, today);
+  const changed = {
+    date: date !== start.date,
+    currency: paidForeign !== start.paidForeign,
+    part: part !== start.part,
+    items: itemized !== start.itemized,
+  };
+  const symbol = CURRENCIES[amountCurrency]?.symbol ?? amountCurrency;
+  const title = isEdit ? 'Edit entry' : inTrip ? `Add to ${trip.name}` : 'Add spending';
 
   return (
-    <Page onClose={onClose}>
+    <Page onClose={onClose} className={inTrip ? 'trip' : ''}>
       {(requestClose) => (
-        <form onSubmit={(e) => handleSubmit(e, requestClose)} className="tx-form">
-          <div className="type-toggle">
-            <button type="button" className={isReceipt ? '' : 'active'} onClick={() => setMode('entry')}>
-              Entry
-            </button>
-            <button type="button" className={isReceipt ? 'active' : ''} onClick={() => setMode('receipt')}>
-              🧾 Receipt
-            </button>
-          </div>
+        <form onSubmit={(e) => handleSubmit(e, requestClose)}>
+          <header className="top">
+            <div className="title">
+              <h1>{title}</h1>
+              <button type="button" className="pill" onClick={requestClose}>Cancel</button>
+            </div>
+            <label className="amount">
+              <span className="amount-cur" aria-hidden="true">{symbol}</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                aria-label={`Amount in ${amountCurrency}`}
+                placeholder="0"
+                value={itemized ? (itemsTotal > 0 ? String(itemsTotal) : '') : amount}
+                readOnly={itemized}
+                onChange={(e) => setAmount(cleanAmount(e.target.value))}
+                autoFocus={!isEdit && !itemized}
+              />
+              {usesForeign && typedAmount > 0 && rate && (
+                <span className="note">about {formatCurrency(roundCents(typedAmount / rate), currency)}</span>
+              )}
+            </label>
+            {itemized && <div className="note amount-hint">The total of the items below</div>}
+          </header>
 
-          {trip && (
-            <div className="field">
-              <span>✈️ {trip.name}</span>
-              <div className="type-toggle">
-                <button type="button" className={inTrip ? '' : 'active'} onClick={() => changePayment(false, paidForeign)}>
-                  Main
+          <div className="body">
+            <div className="tiles">
+              <span className={`tile ${changed.date ? 'on' : ''}`}>
+                <i aria-hidden="true">📅</i>
+                <span>{dateLabel}</span>
+                <input type="date" aria-label="Date" value={date} max={today} onChange={(e) => e.target.value && setDate(e.target.value)} />
+              </span>
+              {inTrip && canPayForeign && (
+                <button type="button" className={`tile ${changed.currency ? 'on' : ''}`} onClick={() => changePayment(part, !paidForeign)} aria-label={`Paid in ${amountCurrency}. Tap for ${usesForeign ? currency : foreignCurrency}`}>
+                  <i aria-hidden="true">{moneyIcon(amountCurrency)}</i>
+                  <span>{amountCurrency}</span>
                 </button>
-                {TRIP_PHASES.map((p) => (
-                  <button
-                    key={p.key}
-                    type="button"
-                    className={inTrip && phase === p.key ? 'active' : ''}
-                    onClick={() => {
-                      setPhase(p.key);
-                      changePayment(true, paidForeign);
-                    }}
-                  >
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {inTrip && canPayForeign && (
-            <div className="type-toggle">
-              <button type="button" className={paidForeign ? 'active' : ''} onClick={() => changePayment(true, true)}>
-                {foreignCurrency}
-              </button>
-              <button type="button" className={paidForeign ? '' : 'active'} onClick={() => changePayment(true, false)}>
-                {currency}
+              )}
+              {trip && (
+                <button type="button" className={`tile ${changed.part ? 'on' : ''}`} onClick={stepPart} aria-label={`${trip.name}: ${PARTS.find((p) => p.key === part).label}. Tap to change`}>
+                  <i aria-hidden="true">{inTrip ? '✈️' : '🏠'}</i>
+                  <span>{PARTS.find((p) => p.key === part).label}</span>
+                </button>
+              )}
+              <button type="button" className={`tile ${changed.items ? 'on' : ''}`} onClick={toggleItems} aria-pressed={itemized}>
+                <i aria-hidden="true">🧾</i>
+                <span>{itemized ? (filledCount > 0 ? `${filledCount} ${filledCount === 1 ? 'item' : 'items'}` : 'Items') : 'No items'}</span>
               </button>
             </div>
-          )}
 
-          {isReceipt ? (
-            <>
-              {noteField}
+            {usesForeign && (
+              <p className="field-hint">
+                {rate && `${date === today ? 'Today' : formatDayMonth(date, today)}: ${formatRate(currency, rate, foreignCurrency)}`}
+                {!rate && isLookingUp && 'Looking up the exchange rate…'}
+                {!rate && !isLookingUp && "Can't reach the exchange rate right now. This converts by itself once you're online."}
+              </p>
+            )}
 
-              <div className="field">
-                <span>Items{canPayForeign ? ` (${amountCurrency})` : ''}</span>
-                <div className="receipt-items">
+            {itemized && (
+              <>
+                <span className="lbl">Items{canPayForeign ? ` in ${amountCurrency}` : ''}</span>
+                <div className="items">
                   {items.map((item) => (
-                    <div key={item.key} className="receipt-item">
+                    <div key={item.key} className="item">
                       <input
+                        className="input"
                         type="text"
                         placeholder="Item"
                         aria-label="Item name"
@@ -301,112 +351,60 @@ export default function TransactionForm({ transaction, defaultJournalId = null, 
                         autoFocus={item.key === focusItemKey}
                       />
                       <input
-                        type="number"
+                        className="input"
+                        type="text"
                         inputMode="decimal"
-                        step="0.01"
-                        min="0"
                         placeholder="0.00"
                         aria-label={`Price of ${item.name || 'item'}`}
                         value={item.price}
-                        onChange={(e) => changeItem(item.key, 'price', e.target.value)}
+                        onChange={(e) => changeItem(item.key, 'price', cleanAmount(e.target.value))}
                         onKeyDown={(e) => {
                           if (e.key !== 'Enter') return;
                           e.preventDefault();
                           addItem();
                         }}
                       />
-                      <button type="button" className="receipt-item-remove" onClick={() => removeItem(item.key)} aria-label={`Remove ${item.name || 'item'}`}>
+                      <button type="button" className="item-remove" onClick={() => removeItem(item.key)} aria-label={`Remove ${item.name || 'item'}`}>
                         ✕
                       </button>
                     </div>
                   ))}
                 </div>
-                <button type="button" className="btn ghost receipt-add" onClick={addItem}>+ Add item</button>
-              </div>
+                <button type="button" className="add-item" onClick={addItem}>+ Add item</button>
+                <ReceiptField
+                  savedId={savedReceiptId}
+                  pendingBlob={pendingReceipt}
+                  busy={receiptBusy}
+                  onPick={pickReceipt}
+                  onRemove={removeReceipt}
+                />
+              </>
+            )}
 
-              <div className="field">
-                <div className="receipt-total">
-                  <span>Total</span>
-                  <span>{formatCurrency(itemsTotal, amountCurrency)}</span>
-                </div>
-                {conversionHint}
-              </div>
-            </>
-          ) : (
-            <label className="field">
-              <span>Amount{canPayForeign ? ` (${amountCurrency})` : ''}</span>
-              <input
-                type="number"
-                inputMode="decimal"
-                step="0.01"
-                min="0"
-                placeholder="0.00"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                autoFocus
-              />
-              {conversionHint}
-            </label>
-          )}
-
-          {usesForeign && (
-            <div className="field">
-              <span className="field-hint">
-                {rate && `Rate on ${date === todayISO() ? 'today' : formatDateShort(date)}: ${formatRate(currency, rate, foreignCurrency)}`}
-                {!rate && isLookingUp && 'Looking up the exchange rate…'}
-                {!rate && !isLookingUp && "Can't reach the exchange rate right now. This will convert by itself once you're online."}
-              </span>
-            </div>
-          )}
-
-          {!isReceipt && noteField}
-
-          {isReceipt && (
-            <ReceiptField
-              savedId={savedReceiptId}
-              pendingBlob={pendingReceipt}
-              busy={receiptBusy}
-              onPick={pickReceipt}
-              onRemove={removeReceipt}
-            />
-          )}
-
-          <div className="field">
-            <span>Category</span>
-            <div className="category-grid">
+            <span className="lbl">Category</span>
+            <div className="cat-grid" role="radiogroup" aria-label="Category">
               {visibleCategories.map((c) => (
-                <button
-                  type="button"
-                  key={c.id}
-                  className={`category-choice ${categoryId === c.id ? 'selected' : ''}`}
-                  onClick={() => setCategoryId(c.id)}
-                >
-                  <span className="category-choice-icon" style={{ background: c.color }}>{c.icon}</span>
-                  <span className="category-choice-name">{c.name}</span>
+                <button type="button" key={c.id} role="radio" aria-checked={categoryId === c.id} className={`cat-tile ${categoryId === c.id ? 'on' : ''}`} onClick={() => setCategoryId(c.id)}>
+                  <i aria-hidden="true">{c.icon}</i>
+                  <span>{c.name}</span>
                 </button>
               ))}
             </div>
-          </div>
 
-          <label className="field">
-            <span>Date</span>
-            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} max={todayISO()} />
-          </label>
+            <label className="lbl" htmlFor="entry-note">{itemized ? 'Store' : 'Note'}</label>
+            <input
+              id="entry-note"
+              className="input"
+              type="text"
+              placeholder={itemized ? 'e.g. FairPrice' : 'e.g. Chicken rice'}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+            />
 
-          {error && <p className="form-error">{error}</p>}
+            {error && <p className="form-error" role="alert">{error}</p>}
 
-          <div className="form-actions">
-            {isEdit && (
-              <button type="button" className="btn danger" onClick={() => handleDelete(requestClose)}>
-                Delete
-              </button>
-            )}
-            <button type="button" className="btn ghost" onClick={requestClose}>
-              Cancel
-            </button>
-            <button type="submit" className="btn primary" disabled={receiptBusy}>
-              {isEdit ? 'Save' : 'Add'}
-            </button>
+            <button type="submit" className="cta" disabled={receiptBusy}>{isEdit ? 'Save changes' : 'Add spending'}</button>
+            {isEdit && <button type="button" className="text-btn" onClick={() => handleDelete(requestClose)}>Delete entry</button>}
           </div>
         </form>
       )}

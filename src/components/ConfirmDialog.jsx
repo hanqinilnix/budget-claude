@@ -6,13 +6,11 @@ import { createPortal } from 'react-dom';
 // otherwise carry a position: fixed overlay away with them.
 export default function ConfirmDialog({ message, confirmLabel, onConfirm, onCancel }) {
   return createPortal(
-    <div className="confirm-backdrop" role="alertdialog" aria-modal="true" aria-label={confirmLabel}>
+    <div className="confirm-backdrop" role="alertdialog" aria-modal="true" aria-label={confirmLabel} onClick={(e) => e.target === e.currentTarget && onCancel()}>
       <div className="confirm-box">
         <p className="confirm-message">{message}</p>
-        <div className="form-actions">
-          <button type="button" className="btn ghost" onClick={onCancel}>Cancel</button>
-          <button type="button" className="btn destructive" onClick={onConfirm}>{confirmLabel}</button>
-        </div>
+        <button type="button" className="cta danger" onClick={onConfirm}>{confirmLabel}</button>
+        <button type="button" className="cta alt" onClick={onCancel}>Cancel</button>
       </div>
     </div>,
     document.body

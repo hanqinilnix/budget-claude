@@ -34,17 +34,68 @@ export function formatRate(home, rate, foreign) {
   return `1 ${home} = ${rate} ${foreign}`;
 }
 
-export function formatCurrency(amount, currency = 'USD') {
-  const cfg = CURRENCIES[currency] || CURRENCIES.USD;
+function fractionDigits(currency) {
   try {
-    return new Intl.NumberFormat(cfg.locale, {
-      style: 'currency',
-      currency,
-      maximumFractionDigits: 2,
-    }).format(amount);
+    return new Intl.NumberFormat('en', { style: 'currency', currency }).resolvedOptions().maximumFractionDigits;
   } catch {
-    return `${cfg.symbol}${amount.toFixed(2)}`;
+    return 2;
   }
+}
+
+// Always the currency's own symbol in front, as in S$27,795.15 or ¥48,200,
+// so amounts read the same way on every screen. whole drops the cents, for
+// rough figures such as "about S$137 a day".
+export function formatCurrency(amount, currency = 'USD', { whole = false } = {}) {
+  const symbol = CURRENCIES[currency]?.symbol ?? currency;
+  const digits = whole ? 0 : fractionDigits(currency);
+  const number = Math.abs(amount).toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+  const gap = /^[A-Z]{3}$/.test(symbol) ? ' ' : '';
+  return `${amount < 0 ? '-' : ''}${symbol}${gap}${number}`;
+}
+
+const LONG_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const SHORT_MONTHS = LONG_MONTHS.map((m) => m.slice(0, 3));
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function partsOf(dateStr) {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return { year, month, day, weekday: new Date(year, month - 1, day).getDay() };
+}
+
+// "5 Nov", with the year added when it isn't this year's.
+export function formatDayMonth(dateStr, today = todayISO()) {
+  const { year, month, day } = partsOf(dateStr);
+  return `${day} ${SHORT_MONTHS[month - 1]}${String(year) === today.slice(0, 4) ? '' : ` ${year}`}`;
+}
+
+// "Thu 5 Nov".
+export function formatWeekdayDayMonth(dateStr, today = todayISO()) {
+  return `${WEEKDAYS[partsOf(dateStr).weekday]} ${formatDayMonth(dateStr, today)}`;
+}
+
+// "Tuesday".
+export function formatWeekdayLong(dateStr) {
+  return new Date(`${dateStr}T00:00:00`).toLocaleDateString('en-GB', { weekday: 'long' });
+}
+
+// "2 to 8 Nov", or "30 Nov to 6 Dec" across a month.
+export function formatDayRange(start, end, today = todayISO()) {
+  const s = partsOf(start);
+  const e = partsOf(end);
+  const left = s.month === e.month && s.year === e.year ? String(s.day) : s.year === e.year ? `${s.day} ${SHORT_MONTHS[s.month - 1]}` : formatDayMonth(start, `${e.year}`);
+  return `${left} to ${formatDayMonth(end, today)}`;
+}
+
+export function formatMonthName(key) {
+  const [year, month] = key.split('-').map(Number);
+  return `${LONG_MONTHS[month - 1]} ${year}`;
+}
+
+// "1st", "22nd".
+export function ordinal(n) {
+  const tens = n % 100;
+  const suffix = tens >= 11 && tens <= 13 ? 'th' : { 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] ?? 'th';
+  return `${n}${suffix}`;
 }
 
 export function todayISO() {
@@ -84,32 +135,6 @@ export function monthKey(dateStr) {
 
 export function currentMonthKey() {
   return todayISO().slice(0, 7);
-}
-
-export function formatMonthLabel(key) {
-  const [year, month] = key.split('-').map(Number);
-  const d = new Date(year, month - 1, 1);
-  return d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
-}
-
-export function formatDateShort(dateStr) {
-  const d = new Date(dateStr + 'T00:00:00');
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-}
-
-export function formatDateWeekday(dateStr, withYear = false) {
-  const d = new Date(dateStr + 'T00:00:00');
-  return d.toLocaleDateString(undefined, {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
-    ...(withYear ? { year: 'numeric' } : {}),
-  });
-}
-
-export function formatDateWithYear(dateStr) {
-  const d = new Date(dateStr + 'T00:00:00');
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 // Moves by whole months, landing on the last day when the month is too short.

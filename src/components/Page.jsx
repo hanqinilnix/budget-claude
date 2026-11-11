@@ -5,7 +5,7 @@ const DRAG_DISMISS_THRESHOLD = 80;
 const DRAG_FLING_DISTANCE = 500;
 const EDGE_ZONE_WIDTH = 24;
 
-export default function Page({ onClose, children }) {
+export default function Page({ onClose, className = '', children }) {
   const { top, height } = useVisualViewportRect();
   const { phase, requestClose } = useDismissablePhase(onClose);
   const [dragX, setDragX] = useState(0);
@@ -47,7 +47,7 @@ export default function Page({ onClose, children }) {
       style={{ top: `${top}px`, height: `${height}px` }}
     >
       <div
-        className={`page ${phase}`}
+        className={`page ${phase} ${className}`}
         style={{
           transform: dragX ? `translateX(${dragX}px)` : undefined,
           transition: isDragging ? 'none' : undefined,

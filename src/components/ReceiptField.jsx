@@ -67,20 +67,20 @@ export default function ReceiptField({ savedId, pendingBlob, busy, onPick, onRem
   );
 
   return (
-    <div className="field">
-      <span>Photo (optional)</span>
+    <div>
+      <span className="lbl">Receipt photo</span>
       {hasReceipt ? (
         <div className="receipt-attached">
           <button type="button" className="receipt-thumb" onClick={() => setViewing(true)} aria-label="View receipt" disabled={!url}>
             {url && <img src={url} alt="" />}
           </button>
           <div className="receipt-actions">
-            {filePicker('Replace', 'btn small ghost')}
-            <button type="button" className="btn small ghost" onClick={onRemove}>Remove</button>
+            {filePicker('Replace', 'add-item')}
+            <button type="button" className="add-item" onClick={onRemove}>Remove</button>
           </div>
         </div>
       ) : (
-        filePicker('Add receipt photo', 'btn ghost receipt-add')
+        filePicker('+ Add a photo', 'add-item')
       )}
       {viewing && url && <ReceiptViewer url={url} onClose={() => setViewing(false)} />}
     </div>

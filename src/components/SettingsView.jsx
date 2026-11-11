@@ -1,8 +1,12 @@
 import { useRef, useState } from 'react';
 import { useSpending } from '../context/SpendingContext.jsx';
 import { parseSpendingsCsv } from '../csvImport.js';
+import { PACES, paceOf } from '../pace.js';
 import { CURRENCIES } from '../utils.js';
+import Chevron from './Chevron.jsx';
 import ConfirmDialog from './ConfirmDialog.jsx';
+
+const SHOWN_PER_GROUP = 3;
 
 export default function SettingsView({ onAddCategory, onEditCategory }) {
   const { categories, currency, setCurrency, exportData, importData, importCsvRows, clearAllData } = useSpending();
@@ -10,6 +14,14 @@ export default function SettingsView({ onAddCategory, onEditCategory }) {
   const csvInputRef = useRef(null);
   const [message, setMessage] = useState('');
   const [confirmingClear, setConfirmingClear] = useState(false);
+  const [openGroups, setOpenGroups] = useState(() => new Set());
+
+  const toggleGroup = (key) => {
+    const next = new Set(openGroups);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    setOpenGroups(next);
+  };
 
   const handleExport = async () => {
     const data = await exportData();
@@ -69,67 +81,76 @@ export default function SettingsView({ onAddCategory, onEditCategory }) {
     setTimeout(() => setMessage(''), 4000);
   };
 
+  const everyday = categories.filter((c) => !c.forTrips);
+  const groups = [
+    ...PACES.map((p) => ({ key: p.key, title: p.label, forTrips: false, pace: p.key, list: everyday.filter((c) => paceOf(c) === p.key) })),
+    { key: 'trips', title: 'Travel categories', forTrips: true, pace: null, list: categories.filter((c) => c.forTrips) },
+  ];
+
   return (
     <div className="view">
-      <header className="view-header">
-        <h1>Settings</h1>
+      <header className="top">
+        <div className="title"><h1>Settings</h1></div>
       </header>
 
-      <section className="section">
-        <h2 className="section-title">Currency</h2>
-        <select className="settings-select" value={currency} onChange={(e) => setCurrency(e.target.value)}>
+      <div className="body">
+        <label className="lbl" htmlFor="home-currency">Home currency</label>
+        <select id="home-currency" className="input" value={currency} onChange={(e) => setCurrency(e.target.value)}>
           {Object.keys(CURRENCIES).map((code) => (
             <option key={code} value={code}>{code}</option>
           ))}
         </select>
-      </section>
 
-      {[
-        { title: 'Everyday categories', forTrips: false },
-        { title: 'Travel categories', forTrips: true },
-      ].map((group) => (
-        <section key={group.title} className="section">
-          <div className="section-header">
-            <h2 className="section-title">{group.title}</h2>
-            <button type="button" className="btn small primary" onClick={() => onAddCategory(group.forTrips)} aria-label={`Add to ${group.title}`}>+ Category</button>
-          </div>
-          <div className="card-list">
-            {categories.filter((c) => Boolean(c.forTrips) === group.forTrips).map((c) => (
-              <button key={c.id} type="button" className="category-row" onClick={() => onEditCategory(c)}>
-                <span className="tx-icon" style={{ background: c.color }}>{c.icon}</span>
-                <span className="tx-info">
-                  <span className="tx-name">{c.name}</span>
-                </span>
-                <span className="category-chevron">›</span>
-              </button>
-            ))}
-          </div>
-        </section>
-      ))}
+        {groups.map((group) => {
+          const open = openGroups.has(group.key);
+          const shown = open ? group.list : group.list.slice(0, SHOWN_PER_GROUP);
+          return (
+            <section key={group.key}>
+              <h2 className="h">
+                {group.title}
+                <small>
+                  {group.list.length} {group.list.length === 1 ? 'category' : 'categories'} ·{' '}
+                  <button type="button" className="link" onClick={() => onAddCategory(group.forTrips, group.pace)} aria-label={`Add to ${group.title}`}>Add</button>
+                </small>
+              </h2>
+              <ul className="rows">
+                {shown.map((c) => (
+                  <li key={c.id}>
+                    <button type="button" className="row" onClick={() => onEditCategory(c)}>
+                      <span className="ico">{c.icon}</span>
+                      <span className="grow"><b>{c.name}</b></span>
+                      <span className="chev"><Chevron direction="right" size={14} /></span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              {group.list.length > SHOWN_PER_GROUP && (
+                <button type="button" className="more link" onClick={() => toggleGroup(group.key)}>
+                  {open ? 'Show fewer' : `Show ${group.list.length - SHOWN_PER_GROUP} more`}
+                </button>
+              )}
+            </section>
+          );
+        })}
 
-      <section className="section">
-        <h2 className="section-title">Backup</h2>
-        <p className="settings-hint">Your data is stored only on this device. Export a backup regularly, especially before clearing browser data. Backups include your receipt photos, so they can get large.</p>
-        <div className="settings-actions">
-          <button type="button" className="btn primary" onClick={handleExport}>Export a backup</button>
-          <button type="button" className="btn ghost" onClick={handleImportClick}>Import a backup</button>
-          <input ref={fileInputRef} type="file" accept="application/json" hidden onChange={handleImportFile} />
-        </div>
-      </section>
+        <h2 className="h">Backup</h2>
+        <p className="hint">Your data is stored only on this device. Export a backup regularly, especially before clearing browser data. Backups include your receipt photos, so they can get large.</p>
+        <button type="button" className="cta" onClick={handleExport}>Export a backup</button>
+        <button type="button" className="cta alt" onClick={handleImportClick}>Import a backup</button>
+        <input ref={fileInputRef} type="file" accept="application/json" hidden onChange={handleImportFile} />
 
-      <section className="section">
-        <h2 className="section-title">Spreadsheet</h2>
-        <p className="settings-hint">Add entries from a .csv file with date, category and amount columns, and optionally remarks. This keeps what's already here and skips rows it has seen before.</p>
-        <div className="settings-actions">
-          <button type="button" className="btn ghost" onClick={() => csvInputRef.current?.click()}>Import a spreadsheet</button>
-          <input ref={csvInputRef} type="file" accept=".csv,text/csv" hidden onChange={handleCsvFile} />
-        </div>
-      </section>
+        <h2 className="h">Spreadsheet</h2>
+        <p className="hint">Add entries from a .csv file with date, category and amount columns, and optionally remarks. This keeps what's already here and skips rows it has seen before.</p>
+        <button type="button" className="cta alt" onClick={() => csvInputRef.current?.click()}>Import a spreadsheet</button>
+        <input ref={csvInputRef} type="file" accept=".csv,text/csv" hidden onChange={handleCsvFile} />
 
-      <section className="section">
-        <h2 className="section-title">Danger zone</h2>
-        <button type="button" className="btn danger" onClick={() => setConfirmingClear(true)}>Clear all data</button>
-      </section>
+        {message && <p className="quiet" role="status">{message}</p>}
+
+        <h2 className="h">Danger zone</h2>
+        <button type="button" className="cta danger" onClick={() => setConfirmingClear(true)}>Clear all data</button>
+
+        <p className="hint footer">Spendings works offline, and your data stays on this device. Only currency codes and dates go out, to look up exchange rates.</p>
+      </div>
 
       {confirmingClear && (
         <ConfirmDialog
@@ -139,10 +160,6 @@ export default function SettingsView({ onAddCategory, onEditCategory }) {
           onConfirm={handleClear}
         />
       )}
-
-      {message && <p className="settings-message">{message}</p>}
-
-      <p className="settings-footer">Spendings · works offline · your data stays on this device, and only currency codes and dates go out to look up exchange rates</p>
     </div>
   );
 }

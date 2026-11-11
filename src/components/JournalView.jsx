@@ -1,26 +1,31 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSpending } from '../context/SpendingContext.jsx';
 import { fetchDailyRate } from '../exchangeRates.js';
-import { TRIP_PHASES, stageOf, summarizeJournal } from '../journals.js';
-import { dayBuckets, fillBuckets, tripDayLabel } from '../periods.js';
-import { daysBetweenISO, formatCurrency, formatDateShort, formatDateWeekday, formatDateWithYear, formatRate, roundRate, todayISO } from '../utils.js';
-import CategoryBreakdown, { UNKNOWN_CATEGORY } from './CategoryBreakdown.jsx';
+import { stageOf, summarizeJournal } from '../journals.js';
+import { daysBetweenISO, formatCurrency, formatDayMonth, formatDayRange, formatRate, formatWeekdayDayMonth, roundRate, todayISO } from '../utils.js';
+import Chevron from './Chevron.jsx';
 import ConfirmDialog from './ConfirmDialog.jsx';
 import TransactionRow from './TransactionRow.jsx';
-import TrendBars from './TrendBars.jsx';
 
-export default function JournalView({ journal, phase: phaseKey, onPhaseChange, onEditTransaction, onEditJournal, onEditDayRate, onBack, onBeforeEnd, onBeforeReopen }) {
+function plural(n, word, words = `${word}s`) {
+  return `${n} ${n === 1 ? word : words}`;
+}
+
+// One page with three chapters: before the trip, the trip's own days, newest
+// first, and after the trip. The chapters either side fold into one line.
+export default function JournalView({ journal, onEditTransaction, onEditJournal, onEditDayRate, onBack, backLabel, onBeforeEnd, onBeforeReopen }) {
   const { categoryById, transactions, activeJournal, updateJournal, currency } = useSpending();
   const today = todayISO();
   const isOpen = !journal.endDate;
+  const stage = stageOf(journal, today);
   const [confirmingEnd, setConfirmingEnd] = useState(false);
+  const [openChapter, setOpenChapter] = useState(stage === 'pre' ? 'pre' : null);
 
   const { end, days, total, uncountedForeign, unconverted, missingDates, averageRate, phases } = useMemo(
     () => summarizeJournal(journal, transactions, today),
     [journal, transactions, today]
   );
-  const phase = phases[phaseKey];
-  const stage = stageOf(journal, today);
+  const { pre, trip, post } = phases;
   const daysMissingRate = missingDates.length;
 
   // Entries logged offline, or before the day's rate was published, convert
@@ -47,46 +52,63 @@ export default function JournalView({ journal, phase: phaseKey, onPhaseChange, o
     };
   }, [datesToLookUp, currency, journal, updateJournal]);
 
-  // With a day still missing its rate, the two currencies can't be added
-  // together, so that part of the trip reads in the trip's own currency.
-  const shownCurrency = phase.unconverted ? journal.currency : currency;
-  const shownTotal = phase.unconverted ? phase.foreignTotal : phase.total;
-  const shownEntries = useMemo(
-    () => phase.entries.map((t) => ({ ...t, amount: phase.unconverted ? (t.foreignAmount ?? 0) : t.amount })),
-    [phase]
-  );
-
-  const buckets = useMemo(
-    () => fillBuckets(dayBuckets(journal.startDate, end, tripDayLabel), shownEntries),
-    [journal.startDate, end, shownEntries]
-  );
-
-  const rows = useMemo(() => {
-    const totals = new Map();
-    for (const t of shownEntries) {
-      if (t.amount > 0) totals.set(t.categoryId, (totals.get(t.categoryId) || 0) + t.amount);
-    }
-    return [...totals.entries()]
-      .map(([id, amount]) => ({ id, amount, category: categoryById.get(id) || UNKNOWN_CATEGORY }))
-      .sort((a, b) => b.amount - a.amount);
-  }, [shownEntries, categoryById]);
-
-  const groups = useMemo(() => {
+  const tripDays = useMemo(() => {
     const map = new Map();
-    for (const t of shownEntries) {
-      if (!map.has(t.date)) map.set(t.date, []);
-      map.get(t.date).push(t);
-    }
+    for (const t of trip.entries) map.set(t.date, [...(map.get(t.date) ?? []), t]);
     return [...map.entries()].sort((a, b) => b[0].localeCompare(a[0]));
-  }, [shownEntries]);
+  }, [trip.entries]);
 
-  // Rows show the saved entry, so its real amount and currency stay visible.
-  const entryById = useMemo(() => new Map(phase.entries.map((t) => [t.id, t])), [phase]);
+  const foreign = journal.currency;
+  const showForeign = (amount) => formatCurrency(amount, foreign);
+  const home = (amount, whole = false) => formatCurrency(amount, currency, { whole });
 
-  const dayHeading = (date) =>
-    phaseKey === 'trip' && date >= journal.startDate
-      ? `Day ${daysBetweenISO(journal.startDate, date) + 1} · ${formatDateWeekday(date)}`
-      : formatDateWeekday(date);
+  const dayHeading = (date) => {
+    if (date < journal.startDate) return formatWeekdayDayMonth(date, today);
+    const n = daysBetweenISO(journal.startDate, date) + 1;
+    return date === today ? `Today, day ${n}` : `Day ${n}, ${formatWeekdayDayMonth(date, today)}`;
+  };
+
+  const dayTotal = (items) => {
+    const foreignItems = items.filter((t) => t.foreignAmount != null);
+    if (foreign && foreignItems.length === items.length) return showForeign(foreignItems.reduce((s, t) => s + t.foreignAmount, 0));
+    if (items.some((t) => t.foreignAmount != null && t.amount === 0)) return null;
+    return home(items.reduce((s, t) => s + t.amount, 0));
+  };
+
+  const startsIn = daysBetweenISO(today, journal.startDate);
+  const when = {
+    pre: `Starts ${formatDayMonth(journal.startDate, today)}, ${startsIn === 1 ? 'tomorrow' : `${startsIn} days to go`}`,
+    trip: `Day ${days}, started ${formatDayMonth(journal.startDate, today)}`,
+    post: `${formatDayRange(journal.startDate, journal.endDate ?? end, today)}, ${plural(days, 'day')}`,
+  }[stage];
+
+  let figure;
+  let figureNote = null;
+  if (stage === 'pre') {
+    figure = home(pre.total);
+    figureNote = <>Booked so far, in <b>{plural(pre.entries.length, 'entry', 'entries')}</b></>;
+  } else if (stage === 'trip' && foreign) {
+    figure = showForeign(trip.foreignTotal);
+    figureNote = (
+      <>
+        About <b>{home(trip.total, true)}</b> so far, <b>{home(trip.perDay, true)} a day</b>
+        {trip.unconverted && <>, not counting {showForeign(uncountedForeign)} waiting for a rate</>}.
+        {journal.dailyRates?.[today] && <> Today {formatRate(currency, journal.dailyRates[today], foreign)}</>}
+      </>
+    );
+  } else if (stage === 'trip') {
+    figure = home(trip.total);
+    figureNote = <><b>{home(trip.perDay, true)} a day</b> so far</>;
+  } else {
+    figure = home(total);
+    figureNote = (
+      <>
+        The whole trip{foreign && <>, <b>{showForeign(trip.foreignTotal)}</b> while away</>}, <b>{home(trip.perDay, true)} a day</b>
+        {unconverted && <>, not counting {showForeign(uncountedForeign)} waiting for a rate</>}.
+        {foreign && averageRate && <> Average rate {formatRate(currency, roundRate(averageRate), foreign)}</>}
+      </>
+    );
+  }
 
   const missingRateWarning = daysMissingRate > 0
     ? ` ${daysMissingRate === 1 ? '1 day has' : `${daysMissingRate} days have`} no exchange rate yet. They'll convert once you're online.`
@@ -102,156 +124,95 @@ export default function JournalView({ journal, phase: phaseKey, onPhaseChange, o
     await updateJournal({ ...journal, endDate: null });
   };
 
-  const dates = {
-    pre: `Pre-trip · starts ${formatDateWithYear(journal.startDate)}`,
-    trip: `Started ${formatDateWithYear(journal.startDate)} · Day ${days}`,
-    post: `${formatDateShort(journal.startDate)} – ${formatDateWithYear(journal.endDate ?? end)} · ${days} ${days === 1 ? 'day' : 'days'}`,
-  }[stage];
-
-  const emptyHint = {
-    pre: 'Nothing before the trip yet. Tap + to add bookings like flights or hotels.',
-    trip: 'Nothing logged on this trip yet. Tap + to add the first entry.',
-    post: 'Nothing after the trip yet. Tap + to add costs like the ride home.',
-  }[phaseKey];
+  const chapter = (key, title, phase, emptyHint) => {
+    const open = openChapter === key;
+    const names = [...new Set(phase.entries.map((t) => categoryById.get(t.categoryId)?.name).filter(Boolean))].slice(0, 3).join(', ');
+    return (
+      <section className="chapter">
+        <button type="button" className="row chapter-head" onClick={() => setOpenChapter(open ? null : key)} aria-expanded={open}>
+          <span className="grow">
+            <b>{title}</b>
+            <span className="sub">{phase.entries.length > 0 ? `${names ? `${names}. ` : ''}${plural(phase.entries.length, 'entry', 'entries')}` : 'Nothing yet'}</span>
+          </span>
+          <span className="amt">{home(phase.total)}</span>
+          <span className="chev"><Chevron direction={open ? 'up' : 'down'} size={14} /></span>
+        </button>
+        {open && (phase.entries.length > 0 ? (
+          <ul className="rows">
+            {phase.entries.map((t) => <TransactionRow key={t.id} transaction={t} onEdit={onEditTransaction} showTrip={false} inset />)}
+          </ul>
+        ) : (
+          <p className="hint">{emptyHint}</p>
+        ))}
+      </section>
+    );
+  };
 
   return (
     <div className="view">
-      {onBack && <button type="button" className="back-link" onClick={onBack}>‹ Trips</button>}
-      <header className="view-header">
-        <div className="view-title">
-          <h1>✈️ {journal.name}</h1>
-          <p className="view-sub">{dates}</p>
-          {journal.currency && !isOpen && averageRate && (
-            <p className="view-sub">Average rate: {formatRate(currency, roundRate(averageRate), journal.currency)}</p>
-          )}
-          {journal.currency && isOpen && journal.dailyRates?.[today] && (
-            <p className="view-sub">Today: {formatRate(currency, journal.dailyRates[today], journal.currency)}</p>
-          )}
+      <header className="top">
+        {onBack && <button type="button" className="back" onClick={onBack}><Chevron size={12} /> {backLabel}</button>}
+        <div className="title">
+          <h1>{journal.name}</h1>
+          <button type="button" className="pill" onClick={() => onEditJournal(journal)}>Edit</button>
         </div>
-        <button type="button" className="btn small ghost" onClick={() => onEditJournal(journal)}>Edit</button>
+        <div className="note">{when}</div>
+        <div className="fig">{figure}</div>
+        {figureNote && <div className="note">{figureNote}</div>}
+        {stage === 'trip' && pre.total + post.total > 0 && (
+          <div className="note">With bookings, the whole trip is <b>{home(total)}</b></div>
+        )}
       </header>
 
-      <div className="trip-total">
-        <span className="summary-label">Whole trip</span>
-        <span className="trip-total-value">{formatCurrency(total, currency)}</span>
-        {unconverted && (
-          <span className="trip-total-note">Plus {formatCurrency(uncountedForeign, journal.currency)} without a rate yet</span>
-        )}
-      </div>
+      <div className="body">
+        {(stage === 'pre' || pre.entries.length > 0) && chapter('pre', 'Before the trip', pre, 'Nothing before the trip yet. Tap + to add bookings like flights or a hotel.')}
 
-      <div className="segmented">
-        {TRIP_PHASES.map((p) => (
-          <button key={p.key} type="button" className={phaseKey === p.key ? 'active' : ''} onClick={() => onPhaseChange(p.key)}>
-            {p.label}
-          </button>
-        ))}
-      </div>
-
-      {phaseKey === 'trip' ? (
-        <div className="summary-cards">
-          {journal.currency ? (
-            <>
-              <div className="summary-card">
-                <span className="summary-label">{journal.currency}</span>
-                <span className="summary-value">{formatCurrency(phase.foreignTotal, journal.currency)}</span>
-              </div>
-              <div className="summary-card">
-                <span className="summary-label">{currency}</span>
-                <span className="summary-value">{formatCurrency(phase.total, currency)}</span>
-              </div>
-            </>
+        {stage !== 'pre' && (
+          tripDays.length === 0 ? (
+            <p className="empty-hint">Nothing logged on this trip yet. Tap + to add the first entry.</p>
           ) : (
-            <div className="summary-card">
-              <span className="summary-label">Spent</span>
-              <span className="summary-value">{formatCurrency(phase.total, currency)}</span>
-            </div>
-          )}
-          <div className="summary-card">
-            <span className="summary-label">Per day</span>
-            <span className="summary-value">
-              {formatCurrency(phase.unconverted ? phase.foreignPerDay : phase.perDay, shownCurrency)}
-            </span>
-          </div>
-          {!journal.currency && (
-            <div className="summary-card">
-              <span className="summary-label">{isOpen ? 'Day' : 'Days'}</span>
-              <span className="summary-value">{days}</span>
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="summary-cards single">
-          <div className="summary-card">
-            <span className="summary-label">{phaseKey === 'pre' ? 'Before the trip' : 'After the trip'}</span>
-            <span className="summary-value">{formatCurrency(phase.total, currency)}</span>
-          </div>
-        </div>
-      )}
+            tripDays.map(([date, items]) => {
+              const rate = journal.dailyRates?.[date];
+              const total = dayTotal(items);
+              return (
+                <section key={date}>
+                  <h2 className="h">{dayHeading(date)} {total && <small>{total}</small>}</h2>
+                  {items.some((t) => t.foreignAmount != null) && (
+                    <button type="button" className="day-rate" onClick={() => onEditDayRate(journal, date)}>
+                      {rate ? formatRate(currency, rate, foreign) : 'Add the exchange rate'}
+                    </button>
+                  )}
+                  <ul className="rows">
+                    {items.map((t) => <TransactionRow key={t.id} transaction={t} onEdit={onEditTransaction} showTrip={false} foreignFirst />)}
+                  </ul>
+                </section>
+              );
+            })
+          )
+        )}
 
-      {phase.unconverted && (
-        <p className="journal-note">
-          {phase.homePaid > 0 && `Includes ${formatCurrency(phase.homePaid, currency)} paid in ${currency}. `}
-          Waiting for {daysMissingRate === 1 ? "a day's" : "some days'"} exchange rate. This converts to {currency} automatically once you're online.
-        </p>
-      )}
+        {(stage === 'post' || post.entries.length > 0) && chapter('post', 'After the trip', post, 'Nothing after the trip yet. Tap + to add costs like the ride home.')}
 
-      {phase.entries.length === 0 ? (
-        <p className="empty-hint">{emptyHint}</p>
-      ) : (
-        <>
-          {phaseKey === 'trip' && days >= 2 && (
-            <section className="section">
-              <h2 className="section-title">By day</h2>
-              <div className="trend-card">
-                <TrendBars buckets={buckets} currency={shownCurrency} today={today} caption="Tap a bar to see that day" />
-              </div>
-            </section>
-          )}
+        {unconverted && (
+          <p className="quiet">
+            {plural(daysMissingRate, 'day')} still {daysMissingRate === 1 ? 'needs' : 'need'} an exchange rate. {showForeign(uncountedForeign)} is left out of the totals in {currency} until then, and converts by itself once you're online.
+          </p>
+        )}
 
-          {rows.length > 0 && (
-            <section className="section">
-              <h2 className="section-title">By category</h2>
-              <CategoryBreakdown key={phaseKey} rows={rows} total={shownTotal} currency={shownCurrency} />
-            </section>
-          )}
-
-          {groups.map(([date, items]) => {
-            const dayTotal = items.reduce((sum, t) => sum + t.amount, 0);
-            return (
-              <div key={date} className="tx-group">
-                <div className="tx-group-date journal-day">
-                  <span>{dayHeading(date)}</span>
-                  {dayTotal > 0 && <span>{formatCurrency(dayTotal, shownCurrency)}</span>}
-                </div>
-                {items.some((t) => t.foreignAmount != null) && (
-                  <button type="button" className="day-rate" onClick={() => onEditDayRate(journal, date)}>
-                    {journal.dailyRates?.[date] ? formatRate(currency, journal.dailyRates[date], journal.currency) : 'Add exchange rate'} ›
-                  </button>
-                )}
-                <ul className="tx-list">
-                  {items.map((t) => <TransactionRow key={t.id} transaction={entryById.get(t.id)} onEdit={onEditTransaction} showTrip={false} />)}
-                </ul>
-              </div>
-            );
-          })}
-        </>
-      )}
-
-      <div className="journal-actions">
         {stage === 'pre' ? (
-          <p className="settings-hint">The trip begins automatically on {formatDateShort(journal.startDate)}. Plans changed? Move the first day with Edit.</p>
+          <p className="hint">The trip begins by itself on {formatDayMonth(journal.startDate, today)}. Plans changed? Move the first day with Edit.</p>
         ) : isOpen ? (
-          <button type="button" className="btn ghost" onClick={() => setConfirmingEnd(true)}>End trip</button>
+          <button type="button" className="cta alt" onClick={() => setConfirmingEnd(true)}>End trip</button>
         ) : activeJournal ? (
-          <p className="settings-hint">End {activeJournal.name} to reopen this trip.</p>
+          <p className="hint">End {activeJournal.name} to reopen this trip.</p>
         ) : (
-          <button type="button" className="btn ghost" onClick={reopen}>Reopen trip</button>
+          <button type="button" className="cta alt" onClick={reopen}>Reopen trip</button>
         )}
       </div>
 
       {confirmingEnd && (
         <ConfirmDialog
-          message={`End "${journal.name}"? You'll go back to the main view, and this trip stays in Trips.${missingRateWarning}`}
+          message={`End "${journal.name}"? You'll go back to everyday spending, and this trip stays in Trips.${missingRateWarning}`}
           confirmLabel="End trip"
           onCancel={() => setConfirmingEnd(false)}
           onConfirm={endTrip}
