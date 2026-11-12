@@ -5,6 +5,7 @@ import { PACES, paceOf } from '../pace.js';
 import { CURRENCIES } from '../utils.js';
 import Chevron from './Chevron.jsx';
 import ConfirmDialog from './ConfirmDialog.jsx';
+import { setFitReadout, showFitReadout } from './FitReadout.jsx';
 
 const SHOWN_PER_GROUP = 3;
 
@@ -145,6 +146,12 @@ export default function SettingsView({ onAddCategory, onEditCategory }) {
         <input ref={csvInputRef} type="file" accept=".csv,text/csv" hidden onChange={handleCsvFile} />
 
         {message && <p className="quiet" role="status">{message}</p>}
+
+        <h2 className="h">Screen check</h2>
+        <p className="hint">Shows the screen measurements along the top, for checking that the app fills the screen. Temporary, while that fix is checked on the phone.</p>
+        <button type="button" className="cta alt" onClick={() => setFitReadout(!showFitReadout)}>
+          {showFitReadout ? 'Hide the screen readout' : 'Show the screen readout'}
+        </button>
 
         <h2 className="h">Danger zone</h2>
         <button type="button" className="cta danger" onClick={() => setConfirmingClear(true)}>Clear all data</button>

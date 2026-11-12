@@ -10,8 +10,20 @@
 
 let lastHeight = 0;
 
+// Installed to the home screen there is no browser bar, so the app owns the
+// whole screen. iOS can still report a height short by the status bar there,
+// so the screen's own height counts too, upright only, since iOS keeps
+// reporting the upright height when the phone is turned.
+export function isStandalone() {
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+
+function screenHeight() {
+  return isStandalone() && window.matchMedia('(orientation: portrait)').matches ? window.screen.height : 0;
+}
+
 function measure() {
-  const height = Math.max(window.innerHeight, document.documentElement.clientHeight);
+  const height = Math.max(window.innerHeight, document.documentElement.clientHeight, screenHeight());
   if (height === lastHeight) return;
   lastHeight = height;
   document.documentElement.style.setProperty('--app-height', `${height}px`);

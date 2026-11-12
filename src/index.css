@@ -98,12 +98,15 @@
 }
 
 /* The page itself never scrolls: only the app's own content does. Pinned, so
-   the keyboard can't leave it slid upwards. */
+   the keyboard can't leave it slid upwards. The app is fixed inside it, so
+   there is nothing for the page to scroll even without overflow: hidden.
+   That is left off on purpose: on html or body it would clip to the screen
+   area iOS reports, which a home-screen app can be given short by the status
+   bar's height, cutting off the tab bar at the bottom. */
 html, body {
   margin: 0;
   padding: 0;
   height: 100%;
-  overflow: hidden;
   overscroll-behavior: none;
 }
 
