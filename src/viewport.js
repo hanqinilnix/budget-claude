@@ -1,13 +1,13 @@
-// Keeps the app the height of the area iOS actually draws.
+// Keeps the app the height of the screen.
 //
-// On iOS 26, a home-screen app that draws under the status bar can be given a
-// drawing area short by the status bar's height (WebKit bug 301108), leaving a
-// band at the bottom that iOS paints nothing into. Laying the app out taller
-// than that only pushes the tab bar into the band, where it can't be seen or
-// tapped, so the app follows the height iOS reports instead. The app is pinned
-// to the screen's edges in CSS, and this measures again whenever the screen may
-// have settled, so that if iOS hands over the full height later the app grows
-// to fill it.
+// In a browser tab the app is pinned to the screen's edges and follows the
+// height the browser reports. Installed to the home screen, iOS 26 can report
+// a height short by the status bar's height (WebKit bug 301108) while the app
+// still has the whole screen, so there the screen's own height counts too,
+// upright only, since iOS keeps reporting the upright height when the phone is
+// turned. The CSS lays the home-screen app out in the page rather than pinned,
+// because iOS draws nothing pinned below its short line. This measures again
+// whenever the screen may have settled, so a stale first number can't stick.
 
 let lastHeight = 0;
 
@@ -15,8 +15,12 @@ export function isStandalone() {
   return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 }
 
+function screenHeight() {
+  return isStandalone() && window.matchMedia('(orientation: portrait)').matches ? window.screen.height : 0;
+}
+
 function measure() {
-  const height = Math.max(window.innerHeight, document.documentElement.clientHeight);
+  const height = Math.max(window.innerHeight, document.documentElement.clientHeight, screenHeight());
   if (height === lastHeight) return;
   lastHeight = height;
   document.documentElement.style.setProperty('--app-height', `${height}px`);

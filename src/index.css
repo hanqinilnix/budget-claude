@@ -36,6 +36,10 @@
   --track: var(--cream);
 
   --safe-top: env(safe-area-inset-top, 0px);
+  /* The solid strip at the top of every screen, in the top block's colour.
+     It covers the status bar, and in the home-screen app also the band below
+     it that iOS 26 blurs, so no words ever sit in the blur. */
+  --status-strip: var(--safe-top);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   /* The tab row keeps the part of the safe area the home indicator sits in
      and reclaims the rest, which is otherwise a thick empty band. */
@@ -152,6 +156,45 @@ button {
   flex-direction: column;
 }
 
+/* Installed to the home screen, on iOS 26. Two things differ there.
+
+   iOS blurs a band reaching past the bottom of the status bar, so the solid
+   strip at the top is made deeper and the first words start below the blur.
+
+   iOS also reports a screen area short by the status bar's height (WebKit bug
+   301108), and draws nothing pinned to the screen below that line, which cut
+   off the tab bar. Content that is part of the page itself is still drawn
+   there: the page's own background fills that strip. So here the app is laid
+   out in the page rather than pinned to the screen, at the height of the whole
+   screen (measured in src/viewport.js). Should iOS not draw it after all, the
+   page can still be scrolled to reach the tab bar. */
+@media (display-mode: standalone) {
+  :root {
+    --status-strip: calc(var(--safe-top) + 26px);
+  }
+
+  html,
+  body {
+    height: auto;
+    min-height: var(--app-height, 100%);
+  }
+
+  body {
+    position: static;
+  }
+
+  .app,
+  .app-loading {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: auto;
+    height: var(--app-height, 100%);
+    min-height: 0;
+  }
+}
+
 .app-loading {
   display: flex;
   align-items: center;
@@ -173,7 +216,7 @@ button {
 
 .fit-readout {
   position: fixed;
-  top: calc(var(--safe-top) + 4px);
+  top: calc(var(--status-strip) + 4px);
   left: 4px;
   right: 4px;
   z-index: 100;
@@ -194,7 +237,7 @@ button {
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior-y: contain;
-  border-top: var(--safe-top) solid var(--top-bg);
+  border-top: var(--status-strip) solid var(--top-bg);
   padding-bottom: 32px;
   -webkit-overflow-scrolling: touch;
 }
@@ -835,7 +878,7 @@ button.row:active,
   height: 100%;
   background: var(--page);
   overflow-y: auto;
-  border-top: var(--safe-top) solid var(--top-bg);
+  border-top: var(--status-strip) solid var(--top-bg);
   padding-bottom: calc(24px + var(--safe-bottom));
   transform: translateX(0);
   transition: transform 0.2s ease-out;
@@ -1148,7 +1191,7 @@ select.input {
   height: 100%;
   overflow: auto;
   display: flex;
-  padding-top: var(--safe-top);
+  padding-top: var(--status-strip);
 }
 
 .receipt-viewer-scroll img {
@@ -1169,7 +1212,7 @@ select.input {
 
 .receipt-viewer-close {
   position: fixed;
-  top: calc(var(--safe-top) + 12px);
+  top: calc(var(--status-strip) + 12px);
   right: 12px;
   z-index: 1;
   width: 42px;
