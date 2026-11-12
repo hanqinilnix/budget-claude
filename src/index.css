@@ -952,9 +952,12 @@ select.input {
 }
 
 /* The big amount in a form's top block */
+/* The symbol and the typed amount are separate boxes, and iOS places text in
+   a typing box differently from plain text, so they line up by the line the
+   text sits on rather than by their box edges. */
 .amount {
   display: flex;
-  align-items: flex-end;
+  align-items: baseline;
   justify-content: space-between;
   gap: 2px;
   margin-top: 12px;
@@ -975,8 +978,13 @@ select.input {
   flex: 1;
   min-width: 0;
   width: 100%;
+  height: auto;
+  margin: 0;
   padding: 0;
   border: none;
+  border-radius: 0;
+  appearance: none;
+  -webkit-appearance: none;
   background: none;
   font-stretch: 75%;
   font-weight: 800;
@@ -999,7 +1007,6 @@ select.input {
 .amount .note {
   flex: none;
   margin-left: 6px;
-  padding-bottom: 6px;
 }
 
 /* One row of answers under the amount */
