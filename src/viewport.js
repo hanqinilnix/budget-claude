@@ -1,29 +1,22 @@
-// Keeps the app the height of the screen.
+// Keeps the app the height of the area iOS actually draws.
 //
-// Launched from the home screen, an iPhone can hand the app its screen height
-// before it has applied the request to draw under the status bar, so the first
-// number is short by about the status bar's height. Sizing the app once from
-// that number left a band empty until something forced a new measurement.
-// The app is pinned to the screen's edges in CSS instead, and this measures
-// again whenever the screen may have settled, publishing the larger of the
-// two as --app-height so a stale first layout can't stick.
+// On iOS 26, a home-screen app that draws under the status bar can be given a
+// drawing area short by the status bar's height (WebKit bug 301108), leaving a
+// band at the bottom that iOS paints nothing into. Laying the app out taller
+// than that only pushes the tab bar into the band, where it can't be seen or
+// tapped, so the app follows the height iOS reports instead. The app is pinned
+// to the screen's edges in CSS, and this measures again whenever the screen may
+// have settled, so that if iOS hands over the full height later the app grows
+// to fill it.
 
 let lastHeight = 0;
 
-// Installed to the home screen there is no browser bar, so the app owns the
-// whole screen. iOS can still report a height short by the status bar there,
-// so the screen's own height counts too, upright only, since iOS keeps
-// reporting the upright height when the phone is turned.
 export function isStandalone() {
   return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 }
 
-function screenHeight() {
-  return isStandalone() && window.matchMedia('(orientation: portrait)').matches ? window.screen.height : 0;
-}
-
 function measure() {
-  const height = Math.max(window.innerHeight, document.documentElement.clientHeight, screenHeight());
+  const height = Math.max(window.innerHeight, document.documentElement.clientHeight);
   if (height === lastHeight) return;
   lastHeight = height;
   document.documentElement.style.setProperty('--app-height', `${height}px`);

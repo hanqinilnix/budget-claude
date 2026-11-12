@@ -147,15 +147,6 @@ button {
   background: var(--page);
 }
 
-/* Installed to the home screen there is no browser bar, so the full screen
-   height is always right there. */
-@media (display-mode: standalone) {
-  .app,
-  .app-loading {
-    min-height: max(100lvh, var(--app-height, 0px));
-  }
-}
-
 .app {
   display: flex;
   flex-direction: column;
@@ -191,7 +182,7 @@ button {
   color: #fff;
   background: rgba(0, 0, 0, 0.75);
   border-radius: 6px;
-  pointer-events: none;
+  text-align: left;
 }
 
 /* The only thing that scrolls. A solid strip in the top block's colour covers

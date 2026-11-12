@@ -4,7 +4,8 @@ import { isStandalone } from '../viewport.js';
 // Temporary: shows the numbers behind the screen-fit fix, so a launch that
 // comes up short can be caught on the phone. Appears when the address ends in
 // ?fit, or when switched on in Settings, which is the only way to reach it
-// from the home screen. Remove once the fix has held on the phone.
+// from the home screen. Tapping it hides it. Remove once the fix has held on
+// the phone.
 const STORAGE_KEY = 'fit-readout';
 
 function savedSetting() {
@@ -33,7 +34,7 @@ const atLaunch = { inner: window.innerHeight, client: document.documentElement.c
 
 function read() {
   const probe = document.createElement('div');
-  probe.style.cssText = 'position:fixed;top:0;height:100dvh;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);visibility:hidden';
+  probe.style.cssText = 'box-sizing:content-box;position:fixed;top:0;height:100dvh;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);visibility:hidden';
   document.body.appendChild(probe);
   const style = getComputedStyle(probe);
   const top = parseFloat(style.paddingTop);
@@ -61,12 +62,12 @@ export default function FitReadout() {
   }, []);
   const round = Math.round;
   return (
-    <div className="fit-readout">
+    <button type="button" className="fit-readout" onClick={() => setFitReadout(false)} aria-label="Hide the screen readout">
       {isStandalone() ? 'home screen' : 'browser'} · launch inner {atLaunch.inner} client {atLaunch.client}
       <br />
       app {round(numbers.app)} · tabs end {numbers.navBottom == null ? '-' : round(numbers.navBottom)} · inner {numbers.inner} · dvh {numbers.dvh} · screen {numbers.screen}
       <br />
-      inset top {numbers.top} bottom {numbers.bottom} · measured {numbers.measured || '-'}
-    </div>
+      inset top {numbers.top} bottom {numbers.bottom} · measured {numbers.measured || '-'} · tap to hide
+    </button>
   );
 }
